@@ -4,7 +4,7 @@ Steins;Gate themed personal portfolio website.
 
 **Live at [bradleyng.github.io](https://bradleyng.github.io)**
 
-A single-page portfolio for Bradley Nguyen — CS student at UT Dallas — built
+A single-page portfolio for myself, built
 as a fully static site. The visual system is an original homage to
 Steins;Gate: a nixie-tube divergence meter, world-line diagrams, clockwork
 and circuitry that shift as you move between sections, and a light/dark
