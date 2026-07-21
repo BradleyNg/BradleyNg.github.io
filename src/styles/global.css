@@ -485,28 +485,177 @@ html[data-scene='contact'] #backdrop .scene-contact {
   }
 }
 
-/* ── Experience rail (world-line timeline) ───────────────────────────────── */
+/* ── Experience: diverging world lines ───────────────────────────────────────
+   The most recent role sits on one line; below it the line forks into two
+   parallel world lines and the remaining roles alternate between them, each
+   card indented to its own line. Two lights leapfrog down the branches to
+   mark what is being read. Divergence animates as transforms only (no
+   layout), and the whole thing degrades to a plain single rail without JS
+   and on small screens.
+   ─────────────────────────────────────────────────────────────────────────── */
 
-.rail-node {
+.wl {
+  /* --wl-c must stay >= --wl-s-max so the left branch never lands at a
+     negative x (which would clamp the card indent to 0). */
+  --wl-c: 3.5rem; /* x of the centre (converged) line */
+  --wl-s-max: 2.25rem; /* half the gap between branches once diverged */
+  --wl-s: var(--wl-s-max); /* current half-gap — 0 while converged */
+  --wl-gap: 2.25rem; /* line → card breathing room */
+  position: relative;
+}
+@media (min-width: 1280px) {
+  .wl {
+    --wl-c: 5.5rem;
+    --wl-s-max: 4rem;
+  }
+}
+/* No JS → stays diverged, everything legible. */
+.wl[data-wl='converged'] {
+  --wl-s: 0rem;
+}
+
+/* Each row's horizontal offset from the centre line, by track. */
+.wl-entry {
+  --wl-off: 0rem;
+  position: relative;
+  padding-left: calc(var(--wl-c) + var(--wl-off) + var(--wl-gap));
+}
+.wl-entry[data-track='-1'] {
+  --wl-off: calc(0rem - var(--wl-s-max));
+}
+.wl-entry[data-track='1'] {
+  --wl-off: var(--wl-s-max);
+}
+/* room under the first/last rows for the fork and the merge */
+.wl-entry--lead {
+  padding-bottom: 5.5rem;
+}
+.wl-entry--tail {
+  padding-bottom: 5rem;
+}
+
+/* Both world lines run the full height of every branched row. */
+.wl-seg {
   position: absolute;
-  top: 2.55rem;
-  left: -0.3125rem;
-  width: 0.5625rem;
-  height: 0.5625rem;
+  inset: 0;
+  pointer-events: none;
+}
+.wl-seg::before,
+.wl-seg::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--wl-c);
+  width: 1px;
+  background: var(--line-strong);
+  transition: transform 0.6s ease-out;
+}
+.wl-seg::before {
+  transform: translateX(calc(-1 * var(--wl-s)));
+}
+.wl-seg::after {
+  transform: translateX(var(--wl-s));
+}
+/* the lead row sits above the fork, so it is always a single line */
+.wl-entry--lead .wl-seg::before,
+.wl-entry--lead .wl-seg::after {
+  transform: none;
+}
+
+/* connector from a row's own line across to its card */
+.wl-tick {
+  position: absolute;
+  top: 2.6rem;
+  left: calc(var(--wl-c) + var(--wl-off, 0rem));
+  width: calc(var(--wl-gap) - 0.9rem);
+  height: 1px;
+  background: var(--line-strong);
+  pointer-events: none;
+}
+
+/* fork and merge: geometry stretches with the gap, stroke weight does not */
+.wl-fork,
+.wl-merge {
+  position: absolute;
+  left: calc(var(--wl-c) - var(--wl-s-max));
+  width: calc(2 * var(--wl-s-max));
+  height: 5rem;
+  overflow: visible;
+  color: var(--line-strong);
+}
+.wl-fork {
+  bottom: 0.5rem;
+}
+.wl-merge {
+  bottom: -4.5rem;
+}
+.wl-branch {
+  transform: scaleX(var(--wl-fork-scale, 1));
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transition: transform 0.6s ease-out;
+}
+.wl[data-wl='converged'] .wl-branch {
+  --wl-fork-scale: 0.001;
+}
+
+/* the travelling lights */
+.wl-orb {
+  position: absolute;
+  top: 0;
+  left: var(--wl-c);
+  width: 0.6875rem;
+  height: 0.6875rem;
+  margin: -0.34375rem 0 0 -0.34375rem;
   border-radius: 9999px;
-  background: var(--surface);
-  border: 2px solid var(--accent-bright);
+  background: var(--wl-orb);
+  box-shadow: 0 0 0 3px var(--wl-glow);
+  opacity: 0.5;
+  pointer-events: none;
+  transition:
+    transform 0.5s ease-out,
+    opacity 0.4s ease-out,
+    background-color 0.4s ease-out,
+    box-shadow 0.4s ease-out;
 }
-.rail-node--active {
+.wl-orb--lead {
+  transform: translate(0, var(--wl-orb-lead-y, 0));
+}
+.wl-orb--left {
+  transform: translate(calc(-1 * var(--wl-s)), var(--wl-orb-left-y, 0));
+}
+.wl-orb--right {
+  transform: translate(var(--wl-s), var(--wl-orb-right-y, 0));
+}
+/* the light beside the row you are reading burns amber; the trailing one
+   stays a dim world-line blue (brightness, not another looping pulse) */
+.wl-orb.is-current {
   background: var(--accent-bright);
-  box-shadow: 0 0 0 3px var(--glow), 0 0 10px var(--glow);
+  box-shadow: 0 0 0 4px var(--glow), 0 0 14px var(--glow);
+  opacity: 1;
 }
-.js .rail-node--active {
-  animation: node-pulse 2.6s ease-in-out infinite;
+.wl[data-wl='converged'] .wl-orb--left,
+.wl[data-wl='converged'] .wl-orb--right,
+.wl[data-wl='diverged'] .wl-orb--lead {
+  opacity: 0;
 }
-@keyframes node-pulse {
-  50% {
-    box-shadow: 0 0 0 6px var(--glow), 0 0 16px var(--glow);
+
+/* Small screens have no room to fork: one line, one column. */
+@media (max-width: 1023px) {
+  .wl {
+    --wl-c: 1.25rem;
+    --wl-s-max: 0rem;
+    --wl-s: 0rem;
+    --wl-gap: 1.75rem;
+  }
+  .wl-fork,
+  .wl-merge {
+    display: none;
+  }
+  .wl-entry--lead,
+  .wl-entry--tail {
+    padding-bottom: 2.25rem;
   }
 }
 
@@ -598,8 +747,13 @@ html[data-scene='contact'] #backdrop .scene-contact {
     translate: none;
     transition: none;
   }
+  .wl-seg::before,
+  .wl-seg::after,
+  .wl-branch,
+  .wl-orb {
+    transition: none;
+  }
   .cursor-blink,
-  .js .rail-node--active,
   .js #wl-flash.wl-flash-run,
   .js #wl-flash.wl-flash-run::before,
   .js #wl-flash.wl-flash-run::after,

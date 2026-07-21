@@ -21,16 +21,14 @@ type Stalk = { x: number; top: number; r: number; main?: boolean; dim?: boolean;
 // Stalks rise from below the frame to an orb; `main` renders amber.
 // Full-viewport fields (viewBox 1440×1000): bright stalks toward both
 // margins, faint `dim` ones spanning the middle behind the content.
+// Thinned deliberately: the Experience section now carries a diverging
+// world-line rail in the foreground, so the backdrop stays quiet — a couple
+// of bright threads far right, and faint ones behind the text.
 const experienceStalks: Stalk[] = [
-  { x: 62, top: 330, r: 10 },
-  { x: 148, top: 545, r: 7 },
-  { x: 330, top: 430, r: 8, dim: true },
   { x: 520, top: 300, r: 6, dim: true },
-  { x: 700, top: 575, r: 7, dim: true },
-  { x: 890, top: 385, r: 6, dim: true },
-  { x: 1075, top: 640, r: 8, dim: true },
-  { x: 1235, top: 250, r: 10 },
-  { x: 1318, top: 470, r: 7, label: '1.130426' },
+  { x: 760, top: 575, r: 7, dim: true },
+  { x: 1010, top: 400, r: 6, dim: true },
+  { x: 1300, top: 470, r: 7, label: '1.130426' },
   { x: 1385, top: 165, r: 13, main: true, label: '1.048596' },
 ];
 // In the same full-viewport space as the other fields (1440×1000) so the

@@ -9,3 +9,5 @@ dist/
 screenshots/
 scripts/
 EDITING.md
+# editor/MCP config — can hold API keys, must never be published
+.mcp.json
