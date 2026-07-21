@@ -70,11 +70,16 @@ const alphaMeter = meter?.lightValue
             )
           }
         </div>
+        {/* Opens a draft in whatever mail client the visitor has set up.
+            If they have none configured, the click still copies the
+            address so it never comes up empty. */}
         <a
+          id="dmail-send"
           href={`mailto:${profile.email}`}
+          data-email={profile.email}
           class="glow-text block border-t border-line px-4 py-3 text-center font-mono text-[0.8125rem] uppercase tracking-[0.22em] text-accent transition-colors hover:bg-wash"
         >
-          Send D-Mail ↗
+          <span data-dmail-label>Send D-Mail ↗</span>
         </a>
       </aside>
     </div>
@@ -106,6 +111,31 @@ const alphaMeter = meter?.lightValue
       </p>
     </div>
   </div>
+
+  <script>
+    // Send D-Mail: the mailto opens a draft with the address filled in.
+    // Copy it to the clipboard at the same time, so visitors without a
+    // default mail app still walk away with the address.
+    const send = document.getElementById('dmail-send');
+    send?.addEventListener('click', () => {
+      const label = send.querySelector<HTMLElement>('[data-dmail-label]');
+      const address = send.dataset.email;
+      if (!label || !address || !navigator.clipboard) return;
+      navigator.clipboard
+        .writeText(address)
+        .then(() => {
+          if (label.dataset.busy) return;
+          label.dataset.busy = 'true';
+          const original = label.textContent;
+          label.textContent = 'Address copied ✓';
+          setTimeout(() => {
+            label.textContent = original;
+            delete label.dataset.busy;
+          }, 2200);
+        })
+        .catch(() => {});
+    });
+  </script>
 
   <script>
     // Divergence readout: digits scramble and settle on first view, and

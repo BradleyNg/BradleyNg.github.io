@@ -432,6 +432,19 @@ html[data-scene='contact'] #backdrop .scene-contact {
   }
 }
 
+/* ── World-line stalks — the thread trails backwards, so the orb at its
+      head reads as advancing and laying down line behind it ─────────────── */
+
+.js .wl-stalk {
+  animation: wl-flow var(--wl-flow-duration, 1.8s) linear infinite;
+}
+/* dasharray is 7 3, so a 20-unit shift is exactly two periods — seamless */
+@keyframes wl-flow {
+  to {
+    stroke-dashoffset: 20;
+  }
+}
+
 /* ── Clockwork (hero) — gears turn very slowly, like the OP ──────────────── */
 
 .gear-spin,
@@ -597,6 +610,9 @@ html[data-scene='contact'] #backdrop .scene-contact {
   .osc-trace {
     animation: none;
     stroke-dasharray: none;
+  }
+  .js .wl-stalk {
+    animation: none;
   }
   #backdrop .scene {
     transition: none;

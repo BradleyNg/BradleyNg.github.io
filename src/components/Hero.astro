@@ -44,14 +44,7 @@ const meterSize = 'clamp(2.3rem,6vw,3.5rem)';
       {profile.positioning}
     </p>
 
-    <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3" data-reveal style="--reveal-delay: 180ms">
-      {profile.links.map((link) => (
-        <a class="link-mono" href={link.url} target="_blank" rel="noopener noreferrer">
-          {link.label} ↗
-        </a>
-      ))}
-      <a class="link-mono" href={`mailto:${profile.email}`}>Email ↗</a>
-    </div>
+    {/* Contact links live once, in the Get in touch section. */}
 
     {
       meter && (

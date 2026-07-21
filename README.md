@@ -8,7 +8,7 @@ A single-page portfolio for myself, built
 as a fully static site. The visual system is an original homage to
 Steins;Gate: a nixie-tube divergence meter, world-line diagrams, clockwork
 and circuitry that shift as you move between sections, and a light/dark
-theme modeled on the series' α and β world lines.
+theme modeled on the series' α attractor field and Steins;Gate world line.
 
 ## Features
 
