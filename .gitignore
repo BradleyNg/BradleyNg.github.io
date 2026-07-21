@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.astro/
+.vercel/
+.DS_Store
+*.log
+
+# local-only tooling and notes (kept on disk, not published)
+screenshots/
+scripts/
+EDITING.md
