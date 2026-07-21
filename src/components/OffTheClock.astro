@@ -1,0 +1,115 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import Section from './Section.astro';
+import PixelIcon from './PixelIcon.astro';
+import { interests, sections } from '../lib/content';
+import { withBase } from '../lib/url';
+
+interface Props {
+  index: number;
+}
+const { index } = Astro.props;
+
+const pad = (n: number) => String(n).padStart(2, '0');
+// Entries may name cover art (interests.json → image); it renders only if
+// the file actually exists, otherwise the pixel icon stands in.
+const hasImage = (p: string | undefined): p is string =>
+  !!p && fs.existsSync(path.join(process.cwd(), 'public', p));
+---
+
+{/* .night re-maps every design token to the @channel register: phosphor
+    green on CRT black in the dark theme, green-bar printout paper in the
+    light theme. On desktop the board's surface (and its television +
+    oscilloscope) lives in the fixed Backdrop as the `offclock` scene, so
+    the section arrives via the same crossfade as every other section and
+    its decorations stay in view for the whole scroll — this wrapper goes
+    transparent there. On mobile (no backdrop) it keeps its own surface
+    with soft-fade edges. */}
+<div class="night scanlines night-fade relative isolate overflow-hidden bg-surface text-ink lg:bg-transparent">
+  <div class="relative">
+  <Section id="off-the-clock" index={index} {...sections.offTheClock}>
+    <p class="max-w-[44rem] text-[1.0625rem] leading-relaxed text-muted" data-reveal>
+      {interests.intro}
+      <span class="cursor-blink ml-1 text-accent" aria-hidden="true">▊</span>
+    </p>
+
+    <div class="mt-12 md:mt-14">
+      <h3 class="glow-text font-mono text-xs font-medium uppercase tracking-[0.22em] text-accent" data-reveal>
+        &gt; {interests.gamesLabel} — ranked
+      </h3>
+      <div class="mt-5 grid gap-5 md:grid-cols-3">
+        {
+          interests.games.map((game, i) => (
+            <article class="flex flex-col border border-line bg-raised backdrop-blur-[5px]" data-reveal style={`--reveal-delay: ${i * 90}ms`}>
+              <div class="figure-grid grid h-24 place-items-center overflow-hidden border-b border-line bg-inset" aria-hidden="true">
+                {
+                  hasImage(game.image) ? (
+                    <img src={withBase(game.image)} alt="" class="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <PixelIcon name={game.icon ?? 'gamepad'} class="pixel-glow h-12 w-12 text-accent" />
+                  )
+                }
+              </div>
+              <div class="flex grow flex-col p-5 md:p-6">
+                <div class="flex items-center justify-between font-mono text-[0.6875rem] text-faint">
+                  <span>Slot {pad(game.rank)}</span>
+                  <span class="tracking-[0.2em] text-accent" aria-label={`Rank ${game.rank}`}>
+                    {'★'.repeat(Math.max(1, 4 - game.rank))}{'☆'.repeat(Math.min(2, game.rank - 1))}
+                  </span>
+                </div>
+                <h4 class="font-display mt-3.5 text-xl font-semibold md:text-[1.375rem]">{game.title}</h4>
+                <p class="mt-2.5 grow text-sm leading-relaxed text-muted">{game.blurb}</p>
+                {game.stat && (
+                  <p class="mt-5 border-t border-line pt-3 font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-faint">{game.stat}</p>
+                )}
+              </div>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+
+    <div class="mt-14 md:mt-16">
+      <h3 class="glow-text font-mono text-xs font-medium uppercase tracking-[0.22em] text-accent" data-reveal>
+        &gt; {interests.animeLabel} — ranked
+      </h3>
+      <ol class="mt-5 border-t border-line">
+        {
+          interests.anime.map((show) => (
+            <li
+              class="grid grid-cols-[2.9rem_2.75rem_minmax(0,1fr)] items-start gap-4 border-b border-line py-6 md:grid-cols-[4rem_3rem_minmax(0,1fr)_auto] md:gap-6 md:py-7"
+              data-reveal
+            >
+              <span class="glow-text pt-1.5 font-mono text-lg font-medium text-accent md:text-xl" aria-hidden="true">
+                &gt;&gt;{pad(show.rank)}
+              </span>
+              <div class="grid h-10 w-10 place-items-center overflow-hidden border border-line bg-inset md:h-11 md:w-11" aria-hidden="true">
+                {
+                  hasImage(show.image) ? (
+                    <img src={withBase(show.image)} alt="" class="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <PixelIcon name={show.icon ?? 'crt-tv'} class="pixel-glow h-6 w-6 text-accent md:h-7 md:w-7" />
+                  )
+                }
+              </div>
+              <div>
+                <h4 class="font-display text-lg font-semibold md:text-[1.375rem]">
+                  <span class="sr-only">Rank {show.rank}: </span>
+                  {show.title}
+                </h4>
+                <p class="mt-1.5 max-w-[38rem] text-sm leading-relaxed text-muted">{show.blurb}</p>
+              </div>
+              {show.status && (
+                <span class="col-start-3 mt-1 w-fit border border-line-strong px-2.5 py-1 font-mono text-[0.6875rem] uppercase tracking-[0.16em] text-accent md:col-start-4 md:mt-1.5">
+                  {show.status}
+                </span>
+              )}
+            </li>
+          ))
+        }
+      </ol>
+    </div>
+  </Section>
+  </div>
+</div>

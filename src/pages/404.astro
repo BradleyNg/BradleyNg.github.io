@@ -1,0 +1,22 @@
+---
+import Base from '../layouts/Base.astro';
+import Nav from '../components/Nav.astro';
+import Nixie from '../components/Nixie.astro';
+import { sections } from '../lib/content';
+import { withBase } from '../lib/url';
+
+const nf = sections.notFound;
+---
+
+<Base>
+  <Nav />
+  <main id="main" class="grid min-h-[72vh] place-items-center px-5">
+    <div class="py-24 text-center" data-reveal>
+      <div class="inline-block">
+        <Nixie value="0.000000" label="divergence · unknown world line" size="clamp(1.9rem,5vw,3rem)" scramble />
+      </div>
+      <h1 class="font-display mt-10 text-2xl font-semibold uppercase tracking-[0.01em] md:text-3xl">{nf.title}</h1>
+      <a href={withBase('/')} class="link-mono mt-7 inline-block text-[0.9375rem]">{nf.cta} →</a>
+    </div>
+  </main>
+</Base>

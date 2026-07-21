@@ -1,0 +1,604 @@
+@import "tailwindcss";
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   DESIGN TOKENS — "Future Gadget Lab"
+   A Steins;Gate-inspired system built from original parts: nixie-tube
+   numerals, CRT phosphor, world-line diagrams, clockwork, hardware chips.
+   The palette follows the source material — the anime's washed-out neutral
+   daylight, the opening sequence's cold black with glowing orange
+   clockwork, and the VN UI's white-plus-orange chrome. Four color contexts
+   share one semantic variable set:
+
+     :root            light — washed, overexposed daylight + vivid orange
+     [data-theme=dark] dark — neutral OP black + glowing orange
+     .night           the @channel section — phosphor-green CRT, always dark
+     .device          hardware chips (meters, stamps, D-Mail) — always dark
+
+   Content never lives here; this file is design only.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+:root {
+  --surface: #f5f5f3;        /* washed near-white */
+  --surface-raised: color-mix(in srgb, #fcfcfb 60%, transparent); /* cards — translucent so backdrop scenes ghost through (pair with backdrop-blur) */
+  --surface-inset: color-mix(in srgb, #ebebe8 55%, transparent);  /* figure wells / chips — translucent for the same reason */
+  --ink: #191b1d;            /* neutral cool near-black */
+  --ink-muted: #4d5257;
+  --ink-faint: #7e858b;
+  --line: #dddedb;
+  --line-strong: #b6b9b4;
+  --accent: #b8420c;         /* deep S;G orange — AA-safe for small text */
+  --accent-bright: #ea580c;  /* vivid orange: larger type, rules, graphics */
+  --accent-deep: #8c3208;    /* hover / high-emphasis small text */
+  --wash: #fbe8d9;           /* pale orange panel fill */
+  --glow: rgba(234, 88, 12, 0.22);
+  /* world-line stalks (the anime's rising blue threads + glowing orbs) */
+  --wl-thread: #4e8cc9;
+  --wl-orb: #2e6dab;
+  --wl-glow: rgba(78, 140, 201, 0.4);
+  color-scheme: light;
+}
+
+[data-theme="dark"] {
+  --surface: #0e0e11;
+  --surface-raised: color-mix(in srgb, #17171b 55%, transparent);
+  --surface-inset: color-mix(in srgb, #0a0a0d 50%, transparent);
+  --ink: #e9e9e7;
+  --ink-muted: #a4a6a8;
+  --ink-faint: #6f7276;
+  --line: #26262c;
+  --line-strong: #3f4048;
+  --accent: #ff9d2e;
+  --accent-bright: #ffb254;
+  --accent-deep: #ffd193;
+  --wash: #2b1c09;
+  --glow: rgba(255, 157, 46, 0.4);
+  --wl-thread: #62a8f5;
+  --wl-orb: #ecf5ff;
+  --wl-glow: rgba(140, 190, 255, 0.5);
+  color-scheme: dark;
+}
+
+/* The @channel personal section — always green, but it follows the world
+   line: green-bar tractor-feed printout paper in the light theme, and the
+   phosphor CRT it was printed from in the dark theme. */
+.night {
+  --surface: #edf3e7;
+  --surface-raised: color-mix(in srgb, #f6faf2 62%, transparent);
+  --surface-inset: color-mix(in srgb, #e2ecdb 55%, transparent);
+  --ink: #1a2a1e;
+  --ink-muted: #3f5a47;
+  --ink-faint: #5f7a66;
+  --line: #cfe0cb;
+  --line-strong: #a3bfa0;
+  --accent: #0f7a38;
+  --accent-bright: #16a34a;
+  --accent-deep: #0a5c2b;
+  --wash: #ddebd5;
+  --glow: rgba(22, 163, 74, 0.18);
+  color-scheme: light;
+}
+[data-theme='dark'] .night {
+  /* distinctly green-black so the crossfade from the neutral page black is
+     actually perceptible */
+  --surface: #0c1911;
+  --surface-raised: color-mix(in srgb, #132619 55%, transparent);
+  --surface-inset: color-mix(in srgb, #08120b 50%, transparent);
+  --ink: #dceadd;
+  --ink-muted: #9fbfa6;
+  --ink-faint: #6b8c72;
+  --line: #1d3324;
+  --line-strong: #2f5138;
+  --accent: #57df8f;
+  --accent-bright: #7cf5ae;
+  --accent-deep: #bdffd6;
+  --wash: #10281a;
+  --glow: rgba(87, 223, 143, 0.3);
+  color-scheme: dark;
+}
+
+/* Hardware chips — nixie meters, timestamps, the D-Mail composer, the lab
+   card. Physical objects stay dark on any desk, in any theme. */
+.device {
+  /* Translucent like every other panel, so world lines and clockwork read
+     through the instrument windows (pair with backdrop-blur). */
+  --surface: color-mix(in srgb, #151007 72%, transparent);
+  --surface-raised: color-mix(in srgb, #1d1710 72%, transparent);
+  --surface-inset: color-mix(in srgb, #0f0b05 60%, transparent);
+  --ink: #f3e9d3;
+  --ink-muted: #c9b795;
+  --ink-faint: #92815f;
+  --line: #3a2d18;
+  --line-strong: #5a4522;
+  --accent: #ffb054;
+  --accent-bright: #ffc46b;
+  --accent-deep: #ffdfae;
+  --wash: #2b1f0e;
+  --glow: rgba(255, 176, 84, 0.35);
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-surface: var(--surface);
+  --color-raised: var(--surface-raised);
+  --color-inset: var(--surface-inset);
+  --color-ink: var(--ink);
+  --color-muted: var(--ink-muted);
+  --color-faint: var(--ink-faint);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-accent: var(--accent);
+  --color-accent-bright: var(--accent-bright);
+  --color-accent-deep: var(--accent-deep);
+  --color-wash: var(--wash);
+  --font-display: "Chakra Petch", "Inter Variable", system-ui, sans-serif;
+  --font-sans: "Inter Variable", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --font-nixie: "Nixie One", "IBM Plex Mono", monospace;
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+
+html {
+  scroll-behavior: smooth;
+  /* The page background lives on <html> so the fixed backdrop layer
+     (z-index -1, inside <body>) can paint above it but below content. */
+  background-color: var(--surface);
+  transition: background-color 0.35s ease;
+}
+
+body {
+  color: var(--ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  transition: color 0.35s ease;
+}
+
+::selection {
+  background-color: var(--accent-bright);
+  color: var(--surface);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent-bright);
+  outline-offset: 3px;
+  border-radius: 1px;
+}
+
+/* Emphasis inside content strings (**bold** in data files, strong in about.md) */
+.content-emphasis strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.about-prose p {
+  margin-top: 1.25rem;
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  color: var(--ink-muted);
+}
+.about-prose p:first-child {
+  margin-top: 0;
+}
+.about-prose strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.about-prose em {
+  color: var(--ink-faint);
+}
+
+/* ── Shared micro-components ─────────────────────────────────────────────── */
+
+.kicker {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.link-mono {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  color: var(--accent);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+.link-mono:hover {
+  color: var(--accent-deep);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* Soft phosphor/nixie glow for accent text */
+.glow-text {
+  text-shadow: 0 0 8px var(--glow), 0 0 22px var(--glow);
+}
+
+/* Empty-figure placeholder: graph paper */
+.figure-grid {
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 22px 22px;
+  background-position: center center;
+}
+
+/* Soft glow for pixel icons (uses the context's --glow color) */
+.pixel-glow {
+  filter: drop-shadow(0 0 5px var(--glow));
+}
+
+/* Blinking cursor in the nav monogram */
+.cursor-blink {
+  animation: cursor-blink 1.25s steps(2, jump-none) infinite;
+}
+@keyframes cursor-blink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* ── Nixie tubes (the divergence meter) ──────────────────────────────────── */
+
+.nixie {
+  display: inline-flex;
+  gap: 0.07em;
+}
+/* Tall slim cartridges, tightly packed, like the show's meter prop */
+.nixie-tube {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 0.64em;
+  height: 1.52em;
+  background: linear-gradient(180deg, #261d12 0%, #100c07 45%, #090604 100%);
+  border: 1px solid #3c2a18;
+  border-radius: 0.09em;
+  box-shadow:
+    inset 0 0 0.4em rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    0 0 0.55em rgba(255, 140, 20, 0.18);
+}
+.nixie-tube--dot {
+  width: 0.4em;
+}
+/* prominent anode mesh over the whole window */
+.nixie-tube::before {
+  content: "";
+  position: absolute;
+  inset: 0.04em 0.02em 0.18em;
+  background:
+    repeating-linear-gradient(0deg, rgba(255, 220, 175, 0.07) 0 1px, transparent 1px 2.5px),
+    repeating-linear-gradient(90deg, rgba(255, 220, 175, 0.07) 0 1px, transparent 1px 2.5px);
+}
+/* metallic base cap */
+.nixie-tube::after {
+  content: "";
+  position: absolute;
+  left: -0.015em;
+  right: -0.015em;
+  bottom: -0.02em;
+  height: 0.17em;
+  border-radius: 0.03em;
+  background: linear-gradient(180deg, #5c5c64 0%, #2a2a30 55%, #191a1e 100%);
+  box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.65);
+}
+/* unlit cathode ghost behind the lit digit */
+.nixie-ghost {
+  position: absolute;
+  font-family: var(--font-nixie);
+  font-size: 1.12em;
+  color: rgba(255, 185, 110, 0.1);
+  line-height: 1;
+}
+.nixie-digit {
+  position: relative;
+  font-family: var(--font-nixie);
+  font-size: 1.12em;
+  line-height: 1;
+  color: #ffc061;
+  text-shadow:
+    0 0 1px #fff3da,
+    0 0 6px #ff9a2e,
+    0 0 14px #ff7300,
+    0 0 28px rgba(255, 115, 0, 0.55);
+}
+/* neon decimal point, seated low in its own thin tube */
+.nixie-dot {
+  position: relative;
+  align-self: end;
+  margin-bottom: 0.26em;
+  width: 0.12em;
+  height: 0.12em;
+  border-radius: 9999px;
+  background: #ffcd8f;
+  box-shadow:
+    0 0 4px #ffa02e,
+    0 0 10px #f97316;
+}
+.nixie-tube--dot {
+  place-items: end center;
+}
+
+/* ── Scene timestamp chip (always dark, like the anime's overlays) ───────── */
+
+.stamp {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  color: #f2f2ef;
+  background: #0d0d10;
+  border-left: 2px solid var(--accent-bright);
+  padding: 0.3rem 0.65rem;
+  box-shadow: inset 0 0 0.5rem rgba(0, 0, 0, 0.6);
+}
+
+/* ── The @channel board's texture: green-bar printout banding in light,
+      fine CRT scanlines in dark ──────────────────────────────────────────── */
+
+.scanlines {
+  position: relative;
+}
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(0deg, rgba(15, 122, 56, 0.055) 0 16px, transparent 16px 32px);
+}
+[data-theme='dark'] .scanlines::after {
+  background: repeating-linear-gradient(0deg, rgba(0, 0, 0, 0.28) 0 1px, transparent 1px 3px);
+  opacity: 0.3;
+}
+
+/* ── Living backdrop — one scene per section, crossfaded on scroll ───────── */
+
+#backdrop .scene {
+  position: absolute;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+html:not([data-scene]) #backdrop .scene-intro,
+html[data-scene='intro'] #backdrop .scene-intro,
+html[data-scene='experience'] #backdrop .scene-experience,
+html[data-scene='projects'] #backdrop .scene-projects,
+html[data-scene='credentials'] #backdrop .scene-credentials,
+html[data-scene='offclock'] #backdrop .scene-offclock,
+html[data-scene='contact'] #backdrop .scene-contact {
+  opacity: 1;
+}
+
+/* ── Per-world-line content: the α (light) and β (dark) readings ─────────── */
+
+[data-theme='dark'] .only-alpha,
+[data-theme='light'] .only-beta {
+  display: none;
+}
+
+/* ── Scroll progress: the observed world line advancing ──────────────────── */
+
+#wl-progress {
+  transform: scaleX(var(--wl-progress, 0));
+  transform-origin: left center;
+  box-shadow: 0 0 6px var(--glow);
+}
+
+/* ── Nav: the section currently under observation ────────────────────────── */
+
+.nav-link {
+  position: relative;
+  transition: color 0.2s ease;
+}
+.nav-link[aria-current] {
+  color: var(--accent);
+}
+.nav-link[aria-current]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.4rem;
+  height: 1px;
+  background: var(--accent-bright);
+  box-shadow: 0 0 5px var(--glow);
+}
+
+/* ── RINE trigger word — the VN highlights tappable words in blue ────────── */
+
+.trigger-link {
+  color: #6ea8ff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: color 0.15s ease;
+}
+.trigger-link:hover {
+  color: #a8ccff;
+}
+
+/* ── Oscilloscope trace (@channel board) — a slow marching sweep ─────────── */
+
+.osc-trace {
+  stroke-dasharray: 340 220;
+  animation: osc-march 7s linear infinite;
+}
+@keyframes osc-march {
+  to {
+    stroke-dashoffset: -560;
+  }
+}
+
+/* ── Clockwork (hero) — gears turn very slowly, like the OP ──────────────── */
+
+.gear-spin,
+.gear-spin-reverse {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.gear-spin {
+  animation: gear-rot 90s linear infinite;
+}
+.gear-spin-reverse {
+  animation: gear-rot 64s linear infinite reverse;
+}
+@keyframes gear-rot {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Night-board soft edges — the @channel section fades in/out instead of
+      arriving as a hard slab ────────────────────────────────────────────── */
+
+/* Mobile only — on desktop the board's surface lives in the backdrop and
+   arrives via the scene crossfade instead. */
+.night-fade {
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 4rem, #000 calc(100% - 4rem), transparent);
+  mask-image: linear-gradient(180deg, transparent, #000 4rem, #000 calc(100% - 4rem), transparent);
+}
+@media (min-width: 1024px) {
+  .night-fade {
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+  /* the board texture comes from the full-viewport backdrop scene on
+     desktop — the section wrapper's own copy would double it */
+  .night-fade::after {
+    display: none;
+  }
+}
+
+/* ── Experience rail (world-line timeline) ───────────────────────────────── */
+
+.rail-node {
+  position: absolute;
+  top: 2.55rem;
+  left: -0.3125rem;
+  width: 0.5625rem;
+  height: 0.5625rem;
+  border-radius: 9999px;
+  background: var(--surface);
+  border: 2px solid var(--accent-bright);
+}
+.rail-node--active {
+  background: var(--accent-bright);
+  box-shadow: 0 0 0 3px var(--glow), 0 0 10px var(--glow);
+}
+.js .rail-node--active {
+  animation: node-pulse 2.6s ease-in-out infinite;
+}
+@keyframes node-pulse {
+  50% {
+    box-shadow: 0 0 0 6px var(--glow), 0 0 16px var(--glow);
+  }
+}
+
+/* ── Reading Steiner (theme-switch flash) ────────────────────────────────── */
+
+#wl-flash {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0;
+  background: #fff;
+}
+.js #wl-flash.wl-flash-run {
+  animation: wl-flash 0.3s ease-out;
+}
+@keyframes wl-flash {
+  0% {
+    opacity: 0;
+  }
+  20% {
+    opacity: 0.3;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+/* chromatic slice tears during the shift, like the anime's static glitch */
+#wl-flash::before,
+#wl-flash::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  opacity: 0;
+}
+#wl-flash::before {
+  top: 34%;
+  background: rgba(64, 224, 255, 0.55);
+}
+#wl-flash::after {
+  top: 62%;
+  background: rgba(255, 82, 82, 0.55);
+}
+.js #wl-flash.wl-flash-run::before {
+  animation: wl-slice 0.32s ease-out;
+}
+.js #wl-flash.wl-flash-run::after {
+  animation: wl-slice 0.32s ease-out reverse;
+}
+@keyframes wl-slice {
+  0% {
+    opacity: 0;
+    transform: translateX(-5%);
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(5%);
+  }
+}
+
+/* ── Scroll reveals (JS-gated: no JS → everything just visible) ──────────── */
+
+.js [data-reveal] {
+  opacity: 0;
+  translate: 0 14px;
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    translate 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  transition-delay: var(--reveal-delay, 0ms);
+}
+.js [data-reveal].is-revealed {
+  opacity: 1;
+  translate: 0 0;
+}
+
+/* ── Reduced motion: everything static, nothing lost ─────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .js [data-reveal] {
+    opacity: 1;
+    translate: none;
+    transition: none;
+  }
+  .cursor-blink,
+  .js .rail-node--active,
+  .js #wl-flash.wl-flash-run,
+  .js #wl-flash.wl-flash-run::before,
+  .js #wl-flash.wl-flash-run::after,
+  .gear-spin,
+  .gear-spin-reverse {
+    animation: none;
+  }
+  .osc-trace {
+    animation: none;
+    stroke-dasharray: none;
+  }
+  #backdrop .scene {
+    transition: none;
+  }
+}

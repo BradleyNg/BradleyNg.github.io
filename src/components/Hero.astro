@@ -1,0 +1,92 @@
+---
+import { profile } from '../lib/content';
+import Nixie from './Nixie.astro';
+
+// The logotype renders the name with a glowing semicolon between the parts
+// (the Science Adventure signature). Screen readers still hear the plain
+// name — the semicolon is decorative.
+const nameParts = profile.name.split(' ');
+
+// The meter reads a different world line per theme: β (dark) shows the
+// Steins;Gate value, α (light) the attractor-field one. Both are rendered
+// and CSS reveals the matching pair, so the number is correct before paint.
+const meter = profile.meter;
+const alphaMeter = meter?.lightValue
+  ? { value: meter.lightValue, label: meter.lightLabel ?? meter.label }
+  : null;
+const meterSize = 'clamp(2.3rem,6vw,3.5rem)';
+---
+
+{/* Decorative art lives in the fixed Backdrop layer (scene: intro). */}
+<section id="top" aria-label="Introduction">
+  <div class="mx-auto max-w-6xl px-5 pb-16 pt-14 md:px-8 md:pb-20 md:pt-24">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-3" data-reveal>
+      {
+        profile.badge && (
+          <span class="device border border-line-strong bg-surface px-2.5 py-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-accent">
+            {profile.badge}
+          </span>
+        )
+      }
+      <p class="kicker">{profile.location} · {profile.headline}</p>
+    </div>
+
+    <h1
+      class="font-display mt-6 text-[clamp(2.5rem,8.2vw,5.5rem)] font-bold uppercase leading-[0.98] tracking-tight"
+      data-reveal
+      style="--reveal-delay: 60ms"
+    >
+      {/* prettier-ignore — single line so no whitespace renders around the semicolon */}
+      {nameParts.map((part, i) => (<>{i > 0 && <span class="sr-only"> </span>}{i > 0 && <span class="glow-text text-accent-bright" aria-hidden="true">;</span>}<span>{part}</span></>))}
+    </h1>
+
+    <p class="mt-7 max-w-[44rem] text-lg leading-relaxed text-muted md:text-[1.1875rem]" data-reveal style="--reveal-delay: 120ms">
+      {profile.positioning}
+    </p>
+
+    <div class="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3" data-reveal style="--reveal-delay: 180ms">
+      {profile.links.map((link) => (
+        <a class="link-mono" href={link.url} target="_blank" rel="noopener noreferrer">
+          {link.label} ↗
+        </a>
+      ))}
+      <a class="link-mono" href={`mailto:${profile.email}`}>Email ↗</a>
+    </div>
+
+    {
+      meter && (
+        <div class="mt-12" data-reveal style="--reveal-delay: 240ms">
+          <div class:list={[alphaMeter && 'only-beta']}>
+            <Nixie value={meter.value} label={meter.label} size={meterSize} scramble />
+          </div>
+          {alphaMeter && (
+            <div class="only-alpha">
+              <Nixie value={alphaMeter.value} label={alphaMeter.label} size={meterSize} scramble />
+            </div>
+          )}
+        </div>
+      )
+    }
+
+    {
+      profile.metrics.length > 0 && (
+        <ul class="mt-12 grid border-y border-line sm:grid-cols-2 lg:grid-cols-4" data-reveal style="--reveal-delay: 300ms">
+          {profile.metrics.map((metric, i) => (
+            <li
+              class:list={[
+                'px-1 py-5 sm:px-5',
+                i > 0 && 'border-t border-line sm:border-t-0',
+                i % 2 === 1 && 'sm:border-l sm:border-line',
+                i > 1 && 'sm:border-t sm:border-line lg:border-t-0',
+                i > 0 && 'lg:border-l lg:border-line',
+              ]}
+            >
+              <p class="font-mono text-xl font-medium tabular-nums text-accent md:text-[1.375rem]">{metric.value}</p>
+              <p class="mt-1.5 text-xs leading-snug text-faint">{metric.label}</p>
+            </li>
+          ))}
+        </ul>
+      )
+    }
+  </div>
+</section>

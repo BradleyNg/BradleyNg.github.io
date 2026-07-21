@@ -1,0 +1,155 @@
+---
+import { profile, sections } from '../lib/content';
+import { withBase } from '../lib/url';
+
+interface Props {
+  index: number;
+}
+const { index } = Astro.props;
+const number = String(index).padStart(2, '0');
+const year = new Date().getFullYear();
+
+// Same per-world-line readings as the hero meter (see Hero.astro).
+const meter = profile.meter;
+const alphaMeter = meter?.lightValue
+  ? { value: meter.lightValue, label: meter.lightLabel ?? meter.label }
+  : null;
+---
+
+<footer id="contact" class="scroll-mt-28 border-t border-line md:scroll-mt-16" aria-labelledby="contact-title">
+  <div class="mx-auto max-w-6xl px-5 py-16 md:px-8 md:py-24">
+    <div class="grid gap-12 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-16">
+      <div data-reveal>
+        <h2
+          id="contact-title"
+          class="font-display text-[2rem] font-semibold uppercase leading-tight tracking-[0.01em] md:text-[2.5rem]"
+        >
+          <span class="glow-text mr-3 font-mono text-[0.8em] font-medium tabular-nums text-accent" aria-hidden="true">{number}.</span>{sections.contact.title}
+        </h2>
+        {
+          sections.contact.subtitle && (
+            <p class="mt-4 max-w-[40rem] text-[0.9375rem] leading-relaxed text-muted">{sections.contact.subtitle}</p>
+          )
+        }
+        <div class="mt-9 flex flex-wrap gap-x-7 gap-y-3">
+          {
+            profile.links.map((link) => (
+              <a class="link-mono" href={link.url} target="_blank" rel="noopener noreferrer">
+                {link.label} ↗
+              </a>
+            ))
+          }
+          <a class="link-mono" href={withBase(profile.resumeFile)}>Résumé ↗</a>
+        </div>
+      </div>
+
+      {/* Future Gadget #8 is the one that sends mail to the past. */}
+      <aside
+        class="device self-start border border-line-strong bg-surface text-ink backdrop-blur-[5px]"
+        data-reveal
+        style="--reveal-delay: 100ms"
+      >
+        <p class="flex items-center justify-between border-b border-line px-4 py-2.5 font-mono text-[0.65rem] uppercase tracking-[0.2em] text-faint">
+          <span>D-Mail composer</span>
+          <span class="text-accent">FG-08</span>
+        </p>
+        <div class="space-y-3 px-4 py-4 font-mono text-xs leading-relaxed">
+          <p class="flex gap-3">
+            <span class="w-10 shrink-0 uppercase text-faint">To</span>
+            {/* styled like a RINE trigger word — the VN highlights tappable text in blue */}
+            <a class="trigger-link break-all" href={`mailto:${profile.email}`}>
+              {profile.email}
+            </a>
+          </p>
+          {
+            profile.dmailSubject && (
+              <p class="flex gap-3">
+                <span class="w-10 shrink-0 uppercase text-faint">Subj</span>
+                <span class="text-ink">{profile.dmailSubject}</span>
+              </p>
+            )
+          }
+        </div>
+        <a
+          href={`mailto:${profile.email}`}
+          class="glow-text block border-t border-line px-4 py-3 text-center font-mono text-[0.8125rem] uppercase tracking-[0.22em] text-accent transition-colors hover:bg-wash"
+        >
+          Send D-Mail ↗
+        </a>
+      </aside>
+    </div>
+
+    <div class="mt-16 border-t border-line pt-6 font-mono text-[0.6875rem] text-faint">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <p>© {year} {profile.name} · {profile.location}</p>
+        <p class="text-accent">El Psy Kongroo.</p>
+        <p id="divergence" class="tabular-nums" title="world line, holding steady" aria-hidden="true">
+          {
+            meter && (
+              <>
+                <span class:list={[alphaMeter && 'only-beta']} data-final={meter.value}>
+                  divergence {meter.value}%
+                </span>
+                {alphaMeter && (
+                  <span class="only-alpha" data-final={alphaMeter.value}>
+                    divergence {alphaMeter.value}%
+                  </span>
+                )}
+              </>
+            )
+          }
+        </p>
+      </div>
+      <p class="mt-3 text-[0.625rem] leading-relaxed">
+        Built with Astro · Typeset in Chakra Petch, Inter & IBM Plex Mono · Unofficial homage — Steins;Gate ©
+        MAGES. / Nitroplus, no affiliation.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    // Divergence readout: digits scramble and settle on first view, and
+    // again whenever the world line shifts (theme toggle). Only the
+    // readout for the current world line is visible, so scramble that one.
+    const wrap = document.getElementById('divergence');
+    if (
+      wrap &&
+      !window.matchMedia('(prefers-reduced-motion: reduce)').matches &&
+      document.documentElement.classList.contains('js')
+    ) {
+      const readouts = [...wrap.querySelectorAll<HTMLElement>('[data-final]')];
+      let running = false;
+      const run = () => {
+        const el = readouts.find((r) => r.offsetParent !== null);
+        const final = el?.dataset.final;
+        if (!el || !final || running) return;
+        running = true;
+        const start = performance.now();
+        const DURATION = 1100;
+        const tick = () => {
+          const p = (performance.now() - start) / DURATION;
+          if (p >= 1) {
+            el.textContent = `divergence ${final}%`;
+            running = false;
+            return;
+          }
+          const scrambled = final
+            .split('')
+            .map((ch, i) => (ch === '.' ? '.' : i / final.length < p ? ch : String(Math.floor(Math.random() * 10))))
+            .join('');
+          el.textContent = `divergence ${scrambled}%`;
+          requestAnimationFrame(tick);
+        };
+        tick();
+      };
+      const io = new IntersectionObserver((entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          io.disconnect();
+          run();
+        }
+      });
+      io.observe(wrap);
+      window.addEventListener('wl-shift', run);
+    }
+  </script>
+</footer>

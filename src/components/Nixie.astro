@@ -1,0 +1,88 @@
+---
+/**
+ * A nixie-tube numeral display — the divergence meter. Built entirely from
+ * CSS (no images): dark glass tubes, anode mesh, unlit cathode ghosts, and
+ * glowing digits in the Nixie One face. With `scramble`, digits spin and
+ * settle left-to-right the first time the meter scrolls into view (disabled
+ * under prefers-reduced-motion).
+ */
+interface Props {
+  value: string; // digits and dots only, e.g. "1.048596"
+  label?: string | undefined; // small caption under the tubes
+  size?: string; // CSS font-size driving tube scale
+  scramble?: boolean;
+}
+
+const { value, label, size = '3rem', scramble = false } = Astro.props;
+const chars = value.split('');
+---
+
+<div class="inline-block" role="img" aria-label={`Divergence meter reading ${value} — a Steins;Gate homage`}>
+  <span
+    class="nixie"
+    data-value={value}
+    data-scramble={scramble ? 'true' : undefined}
+    style={`font-size: ${size}`}
+    aria-hidden="true"
+  >
+    {
+      chars.map((ch) =>
+        ch === '.' ? (
+          <span class="nixie-tube nixie-tube--dot">
+            <span class="nixie-dot" />
+          </span>
+        ) : (
+          <span class="nixie-tube">
+            <span class="nixie-ghost">8</span>
+            <span class="nixie-digit" data-final={ch}>
+              {ch}
+            </span>
+          </span>
+        )
+      )
+    }
+  </span>
+  {label && <p class="mt-3 font-mono text-[0.65rem] uppercase tracking-[0.26em] text-faint">{label}</p>}
+</div>
+
+<script>
+  // Digits spin and settle left-to-right: once when a meter first scrolls
+  // into view, and again on every world-line shift (theme toggle).
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function scramble(meter: HTMLElement) {
+    if (meter.dataset.running === 'true') return;
+    const digits = [...meter.querySelectorAll<HTMLElement>('.nixie-digit')];
+    if (digits.length === 0) return;
+    meter.dataset.running = 'true';
+    const start = performance.now();
+    const DURATION = 1400;
+    const tick = () => {
+      const p = (performance.now() - start) / DURATION;
+      for (let i = 0; i < digits.length; i++) {
+        const el = digits[i]!;
+        el.textContent =
+          p >= 1 || i / digits.length < p ? (el.dataset.final ?? '') : String(Math.floor(Math.random() * 10));
+      }
+      if (p < 1) requestAnimationFrame(tick);
+      else meter.dataset.running = 'false';
+    };
+    tick();
+  }
+
+  // `?static=1` (no .js class) disables scripted animation too — meters
+  // render settled, matching the no-JS experience.
+  if (!reduced && document.documentElement.classList.contains('js')) {
+    for (const meter of document.querySelectorAll<HTMLElement>('.nixie[data-scramble]')) {
+      const io = new IntersectionObserver((entries) => {
+        if (!entries.some((e) => e.isIntersecting)) return;
+        io.disconnect();
+        scramble(meter);
+      });
+      io.observe(meter);
+    }
+    window.addEventListener('wl-shift', () => {
+      document.querySelectorAll<HTMLElement>('.nixie[data-scramble]').forEach(scramble);
+    });
+  }
+</script>

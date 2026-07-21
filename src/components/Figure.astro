@@ -1,0 +1,52 @@
+---
+import fs from 'node:fs';
+import path from 'node:path';
+import { withBase } from '../lib/url';
+
+/**
+ * A project's visual area. Renders declared visuals whose files actually
+ * exist in public/; with several, a scroll-snap gallery. With none (or all
+ * missing), a graph-paper "awaiting capture" frame — missing images look
+ * deliberate, never broken.
+ */
+interface Props {
+  visuals: { src: string; alt: string; caption?: string | undefined }[];
+  figNumber: string; // e.g. "01" — project index used in figure labels
+  title: string;
+}
+
+const { visuals, figNumber, title } = Astro.props;
+const existing = visuals.filter((v) => fs.existsSync(path.join(process.cwd(), 'public', v.src)));
+---
+
+{
+  existing.length === 0 ? (
+    <div class="figure-grid relative aspect-[16/10] border-b border-line bg-inset" role="img" aria-label={`Placeholder frame — no figures yet for ${title}`}>
+      <span class="absolute left-2 top-1.5 font-mono text-[0.625rem] text-faint" aria-hidden="true">+</span>
+      <span class="absolute right-2 top-1.5 font-mono text-[0.625rem] text-faint" aria-hidden="true">+</span>
+      <span class="absolute bottom-1.5 left-2 font-mono text-[0.625rem] text-faint" aria-hidden="true">+</span>
+      <span class="absolute bottom-1.5 right-2 font-mono text-[0.625rem] text-faint" aria-hidden="true">+</span>
+      <p class="absolute inset-0 grid place-items-center px-6 text-center font-mono text-[0.6875rem] uppercase tracking-[0.2em] text-faint">
+        Fig. {figNumber} — no visual record yet
+      </p>
+    </div>
+  ) : (
+    <div class="relative border-b border-line">
+      {existing.length > 1 && (
+        <p class="absolute right-2 top-2 z-10 border border-line bg-surface/90 px-2 py-0.5 font-mono text-[0.625rem] uppercase tracking-wide text-muted">
+          {existing.length} figs · scroll →
+        </p>
+      )}
+      <div class="flex aspect-[16/10] snap-x snap-mandatory overflow-x-auto">
+        {existing.map((visual, i) => (
+          <figure class="relative h-full w-full shrink-0 snap-center">
+            <img src={withBase(visual.src)} alt={visual.alt} loading="lazy" class="h-full w-full bg-inset object-cover" />
+            <figcaption class="absolute inset-x-0 bottom-0 bg-surface/90 px-3 py-1.5 font-mono text-[0.6875rem] text-muted backdrop-blur-sm">
+              <span class="text-accent">Fig. {figNumber}.{i + 1}</span> — {visual.caption ?? visual.alt}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </div>
+  )
+}

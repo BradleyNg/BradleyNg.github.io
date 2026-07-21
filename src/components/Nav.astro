@@ -1,0 +1,111 @@
+---
+import { profile, sections } from '../lib/content';
+import { withBase } from '../lib/url';
+import ThemeToggle from './ThemeToggle.astro';
+
+const items = [
+  { id: 'about', label: sections.about.navLabel },
+  { id: 'experience', label: sections.experience.navLabel },
+  { id: 'projects', label: sections.projects.navLabel },
+  { id: 'off-the-clock', label: sections.offTheClock.navLabel },
+  { id: 'contact', label: sections.contact.navLabel },
+];
+---
+
+<header class="sticky top-0 z-40 border-b border-line bg-surface/90 backdrop-blur-md">
+  {/* the observed world line advancing as you read */}
+  <div id="wl-progress" class="absolute inset-x-0 top-0 h-px bg-accent-bright" aria-hidden="true"></div>
+
+  <nav class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5 md:px-8" aria-label="Primary">
+    <a href="#top" class="font-display text-[0.9375rem] font-bold tracking-widest text-ink" aria-label="Back to top">
+      B<span class="text-accent-bright">;</span>N<span class="cursor-blink text-accent-bright">_</span>
+    </a>
+    <div class="hidden items-center gap-7 md:flex">
+      {items.map((item) => (
+        <a href={`#${item.id}`} data-nav={item.id} class="nav-link font-mono text-[0.8125rem] text-muted hover:text-accent">
+          {item.label}
+        </a>
+      ))}
+    </div>
+    <div class="flex items-center gap-3">
+      <ThemeToggle />
+      <a
+        href={withBase(profile.resumeFile)}
+        class="border border-line-strong px-3 py-1.5 font-mono text-xs text-ink transition-colors hover:border-accent-bright hover:text-accent"
+      >
+        Résumé <span class="text-faint">·pdf</span>
+      </a>
+    </div>
+  </nav>
+
+  {/* Small screens have no room for the links above; this row keeps the
+      whole page navigable there. */}
+  <div
+    class="flex gap-5 overflow-x-auto border-t border-line px-5 py-2 [scrollbar-width:none] md:hidden [&::-webkit-scrollbar]:hidden"
+    aria-label="Sections"
+  >
+    {items.map((item) => (
+      <a href={`#${item.id}`} data-nav={item.id} class="nav-link shrink-0 font-mono text-xs text-muted">
+        {item.label}
+      </a>
+    ))}
+  </div>
+</header>
+
+<script>
+  // Marks the section you're currently reading in both nav rows. Uses the
+  // same bottom-most-wins rule as the backdrop scenes, so oscillating at a
+  // section boundary can never strand the marker on the wrong entry.
+  const ORDER = ['about', 'experience', 'projects', 'credentials', 'off-the-clock', 'contact'];
+  // 'credentials' has no nav entry of its own; it keeps Projects marked.
+  const NAV_FOR: Record<string, string> = { credentials: 'projects' };
+  const links = [...document.querySelectorAll<HTMLElement>('[data-nav]')];
+  const inBand = new Set<string>();
+
+  function mark(id: string | null) {
+    const target = id ? (NAV_FOR[id] ?? id) : null;
+    for (const link of links) {
+      if (link.dataset.nav === target) link.setAttribute('aria-current', 'location');
+      else link.removeAttribute('aria-current');
+    }
+  }
+
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) inBand.add(entry.target.id);
+        else inBand.delete(entry.target.id);
+      }
+      for (let i = ORDER.length - 1; i >= 0; i--) {
+        const id = ORDER[i]!;
+        if (inBand.has(id)) return mark(id);
+      }
+      mark(null);
+    },
+    { rootMargin: '-45% 0px -45% 0px' }
+  );
+  for (const id of ORDER) {
+    const el = document.getElementById(id);
+    if (el) io.observe(el);
+  }
+
+  // Scroll progress feeds the world-line rule under the header.
+  const root = document.documentElement;
+  let queued = false;
+  const update = () => {
+    const max = root.scrollHeight - root.clientHeight;
+    root.style.setProperty('--wl-progress', String(max > 0 ? Math.min(1, root.scrollTop / max) : 0));
+    queued = false;
+  };
+  window.addEventListener(
+    'scroll',
+    () => {
+      if (!queued) {
+        queued = true;
+        requestAnimationFrame(update);
+      }
+    },
+    { passive: true }
+  );
+  update();
+</script>

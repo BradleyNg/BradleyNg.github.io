@@ -1,0 +1,395 @@
+---
+/**
+ * The living backdrop: a fixed, decorative layer behind the page whose
+ * motif crossfades as you scroll between sections (a scene per section,
+ * driven by [data-scene] on <html> — see the observer script below and the
+ * scene rules in global.css). Desktop-only, invisible to assistive tech.
+ *
+ * Everything is original geometry drawn from the source material:
+ * ▸ gears — the key art's solid, fine-toothed machined discs (fineGear)
+ * ▸ world lines — the anime's rising blue threads crowned with glowing
+ *   orbs (stalk fields), with one amber thread for the observed line
+ * ▸ schematics, hand-soldered electronics, a clock at 12:00
+ */
+import PixelIcon from './PixelIcon.astro';
+import { clockTicks, fineGear, hand } from '../lib/gears';
+
+// `main` renders amber; `dim` renders extra-faint (for stalks that sit
+// behind the content column — visible through it, never competing with it).
+type Stalk = { x: number; top: number; r: number; main?: boolean; dim?: boolean; label?: string };
+
+// Stalks rise from below the frame to an orb; `main` renders amber.
+// Full-viewport fields (viewBox 1440×1000): bright stalks toward both
+// margins, faint `dim` ones spanning the middle behind the content.
+const experienceStalks: Stalk[] = [
+  { x: 62, top: 330, r: 10 },
+  { x: 148, top: 545, r: 7 },
+  { x: 330, top: 430, r: 8, dim: true },
+  { x: 520, top: 300, r: 6, dim: true },
+  { x: 700, top: 575, r: 7, dim: true },
+  { x: 890, top: 385, r: 6, dim: true },
+  { x: 1075, top: 640, r: 8, dim: true },
+  { x: 1235, top: 250, r: 10 },
+  { x: 1318, top: 470, r: 7, label: '1.130426' },
+  { x: 1385, top: 165, r: 13, main: true, label: '1.048596' },
+];
+const introStalks: Stalk[] = [
+  { x: 205, top: 470, r: 7 },
+  { x: 268, top: 525, r: 5 },
+  { x: 330, top: 445, r: 9, main: true },
+];
+const contactStalks: Stalk[] = [
+  { x: 90, top: 470, r: 7, dim: true },
+  { x: 250, top: 360, r: 6, dim: true },
+  { x: 430, top: 560, r: 7, dim: true },
+  { x: 640, top: 300, r: 6, dim: true },
+  { x: 860, top: 480, r: 8 },
+  { x: 1010, top: 355, r: 9 },
+  { x: 1150, top: 235, r: 13, main: true, label: '1.048596%' },
+  { x: 1290, top: 420, r: 7 },
+  { x: 1390, top: 300, r: 6 },
+];
+
+const bigGear = fineGear(44, 152, 140, 20);
+const midGear = fineGear(26, 82, 72, 12, 4, 42, 7);
+
+// The projects rail: a full-height train of meshing wheels running down the
+// page margin — persistent in view for the whole section, out of the cards'
+// way. Neighbors counter-rotate like a real movement; solid and drafted
+// (outline) wheels alternate, as in the key art.
+const gearTrain = [
+  { x: 114, y: 60, d: fineGear(18, 50, 43, 8), reverse: true, outline: true },
+  { x: 106, y: 186, d: fineGear(20, 56, 48, 9), reverse: false, outline: false },
+  { x: 118, y: 312, d: fineGear(16, 44, 37, 8), reverse: true, outline: true },
+  { x: 104, y: 440, d: fineGear(20, 52, 45, 9), reverse: false, outline: false },
+  { x: 120, y: 580, d: fineGear(14, 40, 34, 7), reverse: true, outline: true },
+  { x: 108, y: 700, d: fineGear(20, 54, 46, 9), reverse: false, outline: false },
+  { x: 116, y: 822, d: fineGear(16, 46, 39, 8), reverse: true, outline: true },
+];
+
+// A shorter counter-phase train for the left margin, so both sides of the
+// projects section read as machine rather than empty drafting paper.
+// Both trains live in a 176-wide viewBox and are kept clear of its edges so
+// no wheel is ever sliced by the SVG viewport (left train hugs the low x
+// side, right train the high side, matching their xMin/xMax alignment).
+const gearTrainLeft = [
+  { x: 62, y: 48, d: fineGear(18, 50, 43, 8), reverse: false, outline: false },
+  { x: 88, y: 162, d: fineGear(14, 40, 34, 7), reverse: true, outline: true },
+  { x: 58, y: 272, d: fineGear(20, 56, 48, 9), reverse: false, outline: false },
+  { x: 90, y: 404, d: fineGear(16, 44, 37, 8), reverse: true, outline: true },
+  { x: 60, y: 522, d: fineGear(18, 52, 44, 9), reverse: false, outline: false },
+  { x: 86, y: 642, d: fineGear(14, 40, 34, 7), reverse: true, outline: true },
+  { x: 58, y: 756, d: fineGear(20, 56, 48, 9), reverse: false, outline: false },
+];
+
+// Ghost wheels behind the card grid itself — visible through the
+// translucent, blurred panels.
+const ghostGearBig = fineGear(40, 200, 184, 26);
+const ghostGearSmall = fineGear(30, 140, 127, 18);
+---
+
+<div id="backdrop" class="pointer-events-none fixed inset-0 -z-10 hidden lg:block" aria-hidden="true">
+  {/* ── intro: the clockwork + a few rising world lines ──────────────── */}
+  <svg class="scene scene-intro right-0 top-6 h-[42rem] w-[42rem]" viewBox="0 0 660 660">
+    <g transform="translate(410 215)" style="color: var(--accent-bright)">
+      <g class="gear-spin">
+        <path d={bigGear} fill="currentColor" fill-rule="evenodd" opacity="0.12"></path>
+        <circle r="102" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.2"></circle>
+        <circle r="36" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.2"></circle>
+      </g>
+    </g>
+    <g transform="translate(235 362)" style="color: var(--accent-bright)">
+      <g class="gear-spin-reverse">
+        <path d={midGear} fill="currentColor" fill-rule="evenodd" opacity="0.16"></path>
+        <circle r="52" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.22"></circle>
+      </g>
+    </g>
+    <g transform="translate(185 135)" opacity="0.2" style="color: var(--accent-bright)">
+      <circle r="86" fill="none" stroke="currentColor" stroke-width="2.5"></circle>
+      <path d={clockTicks(60, 78, 84)} stroke="currentColor" stroke-width="1" fill="none"></path>
+      <path d={clockTicks(12, 71, 84)} stroke="currentColor" stroke-width="2.5" fill="none"></path>
+      <path d={hand(44, 9)} fill="currentColor" transform="rotate(-55)"></path>
+      <path d={hand(64, 7)} fill="currentColor" transform="rotate(55)"></path>
+      <circle r="4" fill="currentColor"></circle>
+    </g>
+    {
+      introStalks.map((s) => (
+        <g>
+          <line
+            x1={s.x}
+            y1={670}
+            x2={s.x}
+            y2={s.top + s.r}
+            stroke-width="1.5"
+            stroke-dasharray="7 3"
+            opacity="0.55"
+            style={`stroke: var(${s.main ? '--accent-bright' : '--wl-thread'})`}
+          />
+          <circle cx={s.x} cy={s.top} r={s.r * 2.4} opacity="0.16" style={`fill: var(${s.main ? '--accent-bright' : '--wl-glow'})`} />
+          <circle cx={s.x} cy={s.top} r={s.r * 1.5} opacity="0.3" style={`fill: var(${s.main ? '--accent-bright' : '--wl-glow'})`} />
+          <circle cx={s.x} cy={s.top} r={s.r} style={`fill: var(${s.main ? '--accent-bright' : '--wl-orb'})`} />
+        </g>
+      ))
+    }
+  </svg>
+
+  {/* ── experience: the world-line field ─────────────────────────────── */}
+  <svg class="scene scene-experience inset-0 h-full w-full" viewBox="0 0 1440 1000" preserveAspectRatio="xMidYMid slice">
+    {
+      experienceStalks.map((s) => (
+        <g>
+          <line
+            x1={s.x}
+            y1={1010}
+            x2={s.x}
+            y2={s.top + s.r}
+            stroke-width="1.6"
+            stroke-dasharray="7 3"
+            opacity={s.main ? '0.8' : s.dim ? '0.16' : '0.5'}
+            style={`stroke: var(${s.main ? '--accent-bright' : '--wl-thread'})`}
+          />
+          {!s.dim && (
+            <>
+              <circle cx={s.x} cy={s.top} r={s.r * 2.4} opacity="0.16" style={`fill: var(${s.main ? '--accent-bright' : '--wl-glow'})`} />
+              <circle cx={s.x} cy={s.top} r={s.r * 1.5} opacity="0.3" style={`fill: var(${s.main ? '--accent-bright' : '--wl-glow'})`} />
+            </>
+          )}
+          <circle cx={s.x} cy={s.top} r={s.r} opacity={s.dim ? '0.3' : '1'} style={`fill: var(${s.main ? '--accent-bright' : '--wl-orb'})`} />
+          {s.label && (
+            <text
+              x={s.x - s.r - 9}
+              y={s.top + 4}
+              text-anchor="end"
+              opacity="0.8"
+              style="fill: var(--ink-faint); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em"
+            >
+              {s.label}
+            </text>
+          )}
+        </g>
+      ))
+    }
+  </svg>
+
+  {/* ── projects: ghost wheels behind the grid + schematic margins ───── */}
+  <svg class="scene scene-projects inset-0 h-full w-full" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <g transform="translate(430 570)" style="color: var(--accent-bright)">
+      <g class="gear-spin">
+        <path d={ghostGearBig} fill="currentColor" fill-rule="evenodd" opacity="0.11"></path>
+      </g>
+    </g>
+    <g transform="translate(1040 250)" style="color: var(--accent-bright)">
+      <g class="gear-spin-reverse">
+        <path d={ghostGearSmall} fill="currentColor" fill-rule="evenodd" opacity="0.1"></path>
+      </g>
+    </g>
+  </svg>
+  <svg class="scene scene-projects left-0 top-0 h-full w-44" viewBox="0 0 176 900" preserveAspectRatio="xMinYMid slice">
+    <defs>
+      <pattern id="bd-grid-l" width="26" height="26" patternUnits="userSpaceOnUse">
+        <path d="M 26 0 H 0 V 26" fill="none" style="stroke: var(--line)" stroke-width="1"></path>
+      </pattern>
+    </defs>
+    <rect x="0" y="0" width="140" height="900" fill="url(#bd-grid-l)" opacity="0.5"></rect>
+    <line x1="140" y1="0" x2="140" y2="900" style="stroke: var(--line-strong)" stroke-width="1" opacity="0.5"></line>
+    {
+      gearTrainLeft.map((g) => (
+        <g transform={`translate(${g.x} ${g.y})`} style="color: var(--accent-bright)">
+          <g class={g.reverse ? 'gear-spin-reverse' : 'gear-spin'}>
+            {g.outline ? (
+              <path d={g.d} fill="none" stroke="currentColor" stroke-width="1.5" fill-rule="evenodd" opacity="0.3" />
+            ) : (
+              <path d={g.d} fill="currentColor" fill-rule="evenodd" opacity="0.13" />
+            )}
+          </g>
+        </g>
+      ))
+    }
+  </svg>
+  <svg class="scene scene-projects right-0 top-0 h-full w-44" viewBox="0 0 176 900" preserveAspectRatio="xMaxYMid slice">
+    <defs>
+      <pattern id="bd-grid-r" width="26" height="26" patternUnits="userSpaceOnUse">
+        <path d="M 26 0 H 0 V 26" fill="none" style="stroke: var(--line)" stroke-width="1"></path>
+      </pattern>
+    </defs>
+    <rect x="36" y="0" width="140" height="900" fill="url(#bd-grid-r)" opacity="0.5"></rect>
+    <line x1="36" y1="0" x2="36" y2="900" style="stroke: var(--line-strong)" stroke-width="1" opacity="0.5"></line>
+  </svg>
+  <svg class="scene scene-projects right-0 top-0 h-full w-44" viewBox="0 0 176 900" preserveAspectRatio="xMaxYMid slice">
+    {
+      gearTrain.map((g) => (
+        <g transform={`translate(${g.x} ${g.y})`} style="color: var(--accent-bright)">
+          <g class={g.reverse ? 'gear-spin-reverse' : 'gear-spin'}>
+            {g.outline ? (
+              <path d={g.d} fill="none" stroke="currentColor" stroke-width="1.5" fill-rule="evenodd" opacity="0.3" />
+            ) : (
+              <path d={g.d} fill="currentColor" fill-rule="evenodd" opacity="0.13" />
+            )}
+          </g>
+        </g>
+      ))
+    }
+  </svg>
+  {/* ── credentials: hand-soldered electronics — board-crossing traces
+        behind the content plus crisp rails along the margins ──────────── */}
+  <svg class="scene scene-credentials inset-0 h-full w-full" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice">
+    <g fill="none" stroke-width="1.6" stroke-linejoin="round" opacity="0.35" style="stroke: var(--line-strong)">
+      <path d="M -10 230 h 330 v 150 h 300 v 120"></path>
+      <path d="M 1450 640 h -380 v -140 h -320"></path>
+      <path d="M 620 910 v -180 h 240"></path>
+      <path d="M 180 900 v -220 h 260 v -90"></path>
+    </g>
+    <g opacity="0.45" style="fill: var(--line-strong)">
+      <circle cx="320" cy="230" r="4"></circle>
+      <circle cx="620" cy="380" r="4"></circle>
+      <circle cx="1070" cy="500" r="4"></circle>
+      <circle cx="860" cy="730" r="4"></circle>
+      <circle cx="440" cy="590" r="4"></circle>
+    </g>
+  </svg>
+  <svg class="scene scene-credentials left-0 top-0 h-full w-36" viewBox="0 0 144 900" preserveAspectRatio="xMinYMid slice">
+    <g fill="none" stroke-width="1.6" stroke-linejoin="round" opacity="0.55" style="stroke: var(--line-strong)">
+      <path d="M 54 -10 v 150 h 46 v 130"></path>
+      <path d="M 24 180 v 240 h 52 v 90"></path>
+      <path d="M 96 560 v 130 h -56 v 130"></path>
+    </g>
+    <path d="M 66 910 v -160 h 48" fill="none" stroke-width="1.8" opacity="0.5" style="stroke: var(--accent-bright)"></path>
+    <g opacity="0.65" style="fill: var(--line-strong)">
+      <circle cx="54" cy="140" r="4"></circle>
+      <circle cx="100" cy="280" r="4"></circle>
+      <circle cx="24" cy="180" r="4"></circle>
+      <circle cx="76" cy="510" r="4"></circle>
+      <circle cx="96" cy="560" r="4"></circle>
+    </g>
+    <circle cx="114" cy="750" r="4.5" opacity="0.6" style="fill: var(--accent-bright)"></circle>
+  </svg>
+  <svg class="scene scene-credentials right-0 top-0 h-full w-36" viewBox="0 0 144 900" preserveAspectRatio="xMaxYMid slice">
+    <g fill="none" stroke-width="1.6" stroke-linejoin="round" opacity="0.55" style="stroke: var(--line-strong)">
+      <path d="M 90 -10 v 120 h -50 v 100"></path>
+      <path d="M 120 300 v 180 h -60 v 160"></path>
+      <path d="M 30 660 v 120 h 60 v 130"></path>
+    </g>
+    <g opacity="0.55">
+      <rect x="30" y="180" width="66" height="44" fill="none" style="stroke: var(--line-strong)" stroke-width="1.6"></rect>
+      {Array.from({ length: 3 }, (_, i) => (
+        <>
+          <rect x="20" y={186 + i * 14} width="10" height="6" style="fill: var(--line-strong)" />
+          <rect x="96" y={186 + i * 14} width="10" height="6" style="fill: var(--line-strong)" />
+        </>
+      ))}
+      <circle cx="42" cy="192" r="3" fill="none" style="stroke: var(--line-strong)" stroke-width="1.2"></circle>
+    </g>
+    <g opacity="0.65" style="fill: var(--line-strong)">
+      <circle cx="40" cy="120" r="4"></circle>
+      <circle cx="120" cy="300" r="4"></circle>
+      <circle cx="60" cy="480" r="4"></circle>
+      <circle cx="30" cy="660" r="4"></circle>
+    </g>
+    <path d="M 132 40 v 140" fill="none" stroke-width="1.8" opacity="0.5" style="stroke: var(--accent-bright)"></path>
+    <circle cx="132" cy="40" r="4.5" opacity="0.6" style="fill: var(--accent-bright)"></circle>
+  </svg>
+
+  {/* ── off the clock: the @channel board itself lives here, so the
+        section arrives as a scene crossfade like every other, and its
+        television + oscilloscope stay fixed in view for the whole scroll.
+        The `night` class re-maps the tokens (printout / CRT per theme). */}
+  <div class="scene scene-offclock night scanlines absolute inset-0 bg-surface text-ink">
+    <PixelIcon name="crt-tv" class="absolute -right-10 top-14 h-[20rem] w-[20rem] opacity-[0.05]" />
+    <PixelIcon name="gamepad" class="absolute -left-12 bottom-20 h-[18rem] w-[18rem] opacity-[0.045]" />
+    {/* a wide trace sweeping behind the cards, so the translucent panels
+        have something of the board to reveal */}
+    <svg class="absolute inset-x-0 top-[38%] h-40 w-full opacity-30" viewBox="0 0 1440 160" preserveAspectRatio="none" fill="none">
+      <path d="M 0 80 H 1440" stroke-width="1" stroke-dasharray="5 10" style="stroke: var(--line-strong)"></path>
+      <path
+        class="osc-trace"
+        d="M 0 80 C 90 10, 180 10, 270 80 S 450 150, 540 80 S 720 10, 810 80 S 990 150, 1080 80 S 1260 10, 1350 80 L 1440 80"
+        stroke-width="2"
+        style="stroke: var(--accent-bright); filter: drop-shadow(0 0 5px var(--glow))"></path>
+    </svg>
+    <svg class="absolute bottom-10 left-8 h-20 w-[32rem] opacity-40" viewBox="0 0 560 120" fill="none">
+      <path d="M 0 60 H 560" stroke-width="1" stroke-dasharray="4 8" style="stroke: var(--line-strong)"></path>
+      <path
+        class="osc-trace"
+        d="M 0 60 C 35 8, 70 8, 105 60 S 175 112, 210 60 S 280 8, 315 60 S 385 112, 420 60 S 490 8, 525 60 L 560 60"
+        stroke-width="1.6"
+        style="stroke: var(--accent-bright); filter: drop-shadow(0 0 4px var(--glow))"></path>
+    </svg>
+  </div>
+
+  {/* ── contact: the field rises toward the Steins Gate line ─────────── */}
+  <svg class="scene scene-contact inset-0 h-full w-full" viewBox="0 0 1440 1000" preserveAspectRatio="xMidYMid slice">
+    {
+      contactStalks.map((s) => (
+        <g>
+          <line
+            x1={s.x}
+            y1={1010}
+            x2={s.x}
+            y2={s.top + s.r}
+            stroke-width="1.6"
+            stroke-dasharray="7 3"
+            opacity={s.main ? '0.8' : s.dim ? '0.16' : '0.5'}
+            style={`stroke: var(${s.main ? '--accent-bright' : '--wl-thread'})`}
+          />
+          {!s.dim && (
+            <>
+              <circle cx={s.x} cy={s.top} r={s.r * 2.4} opacity="0.16" style={`fill: var(${s.main ? '--accent-bright' : '--wl-glow'})`} />
+              <circle cx={s.x} cy={s.top} r={s.r * 1.5} opacity="0.3" style={`fill: var(${s.main ? '--accent-bright' : '--wl-glow'})`} />
+            </>
+          )}
+          <circle cx={s.x} cy={s.top} r={s.r} opacity={s.dim ? '0.3' : '1'} style={`fill: var(${s.main ? '--accent-bright' : '--wl-orb'})`} />
+          {s.label && (
+            <text
+              x={s.x - s.r - 9}
+              y={s.top + 4}
+              text-anchor="end"
+              opacity="0.85"
+              style="fill: var(--ink-faint); font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em"
+            >
+              {s.label}
+            </text>
+          )}
+        </g>
+      ))
+    }
+  </svg>
+</div>
+
+<script>
+  // Sets <html data-scene> from the sections crossing the middle band of
+  // the viewport. State is tracked per section and the *bottom-most*
+  // intersecting section wins, so rapid back-and-forth at a boundary can
+  // never leave a stale scene active (an exit always re-picks from the
+  // sections still in the band).
+  const ORDER = ['top', 'about', 'experience', 'projects', 'credentials', 'off-the-clock', 'contact'] as const;
+  const sceneFor: Record<string, string> = {
+    top: 'intro',
+    about: 'intro',
+    experience: 'experience',
+    projects: 'projects',
+    credentials: 'credentials',
+    'off-the-clock': 'offclock',
+    contact: 'contact',
+  };
+  const inBand = new Set<string>();
+  const io = new IntersectionObserver(
+    (entries) => {
+      for (const entry of entries) {
+        if (entry.isIntersecting) inBand.add(entry.target.id);
+        else inBand.delete(entry.target.id);
+      }
+      for (let i = ORDER.length - 1; i >= 0; i--) {
+        const id = ORDER[i]!;
+        if (inBand.has(id)) {
+          document.documentElement.dataset.scene = sceneFor[id]!;
+          return;
+        }
+      }
+    },
+    { rootMargin: '-45% 0px -45% 0px' }
+  );
+  for (const id of ORDER) {
+    const el = document.getElementById(id);
+    if (el) io.observe(el);
+  }
+</script>

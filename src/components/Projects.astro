@@ -1,0 +1,65 @@
+---
+import Section from './Section.astro';
+import Figure from './Figure.astro';
+import { projects, sections } from '../lib/content';
+import { emphasize } from '../lib/text';
+
+interface Props {
+  index: number;
+}
+const { index } = Astro.props;
+
+const linkLabels = { repo: 'Repo', demo: 'Live demo', devpost: 'Devpost', writeup: 'Write-up' } as const;
+---
+
+<Section id="projects" index={index} {...sections.projects}>
+  <div class="grid gap-6 md:grid-cols-2 md:gap-8">
+    {
+      projects.map((project, i) => {
+        const figNumber = String(i + 1).padStart(2, '0');
+        const links = Object.entries(project.links).filter(([, url]) => Boolean(url)) as [
+          keyof typeof linkLabels,
+          string,
+        ][];
+        return (
+          <article class="flex flex-col border border-line bg-raised backdrop-blur-[5px]" data-reveal style={`--reveal-delay: ${(i % 2) * 90}ms`}>
+            <Figure visuals={project.visuals} figNumber={figNumber} title={project.title} />
+            <div class="flex grow flex-col p-6 md:p-7">
+              <div class="flex items-baseline justify-between gap-4">
+                <span class="font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-faint">
+                  FG-<span class="text-accent">{figNumber}</span>
+                  {project.timeframe && <span class="ml-2 tracking-[0.06em]">· {project.timeframe}</span>}
+                </span>
+                <span class="bg-wash px-2.5 py-1 font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-accent-deep">
+                  {project.category}
+                </span>
+              </div>
+              <h3 class="font-display mt-4 text-[1.4rem] font-medium leading-snug">{project.title}</h3>
+              <p class="font-display mt-1 text-[0.9875rem] italic text-faint">{project.tagline}</p>
+              <p class="content-emphasis mt-4 text-[0.9375rem] leading-relaxed text-muted" set:html={emphasize(project.description)} />
+              {project.highlights.length > 0 && (
+                <ul class="mt-5 flex flex-wrap gap-2">
+                  {project.highlights.map((h) => (
+                    <li class="border border-line bg-inset px-2.5 py-1 font-mono text-xs tabular-nums text-accent">{h}</li>
+                  ))}
+                </ul>
+              )}
+              {project.tech.length > 0 && <p class="mt-4 font-mono text-xs leading-relaxed text-faint">{project.tech.join(' · ')}</p>}
+              {links.length > 0 && (
+                <div class="mt-auto pt-6">
+                  <div class="flex flex-wrap gap-x-6 gap-y-2 border-t border-line pt-4">
+                    {links.map(([key, url]) => (
+                      <a class="link-mono" href={url} target="_blank" rel="noopener noreferrer">
+                        {linkLabels[key]} ↗
+                      </a>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </article>
+        );
+      })
+    }
+  </div>
+</Section>
