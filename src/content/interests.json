@@ -1,0 +1,49 @@
+{
+  "_readme": "The 'Off the clock' personal section. Games render as save-slot cards, anime as a ranked list — both sorted by 'rank' (1 = favorite), so renumbering reorders them automatically. 'stat' (games) and 'status' (anime) are optional short mono lines rendered uppercase; omit them and nothing renders. Field docs: src/lib/content.ts.",
+  "intro": "Off the clock I'm usually gaming or watching anime. Current favorites, ranked.",
+  "gamesLabel": "Games",
+  "animeLabel": "Anime",
+  "games": [
+    {
+      "rank": 1,
+      "title": "Minecraft",
+      "blurb": "The game I always come back to. Redstone was my first real introduction to logic and debugging.",
+      "icon": "voxel-block"
+    },
+    {
+      "rank": 2,
+      "title": "Genshin Impact",
+      "blurb": "Beautiful open world, even better soundtrack.",
+      "icon": "gem"
+    },
+    {
+      "rank": 3,
+      "title": "Brawl Stars",
+      "blurb": "Quick matches that fit perfectly between classes.",
+      "icon": "star-bolt"
+    }
+  ],
+  "anime": [
+    {
+      "rank": 1,
+      "title": "Steins;Gate",
+      "blurb": "My favorite piece of fiction, period — and the reason this site looks the way it does.",
+      "icon": "microwave",
+      "status": "rewatched"
+    },
+    {
+      "rank": 2,
+      "title": "Attack on Titan",
+      "blurb": "Years of setup that all pays off. Some of the best long-form storytelling I've seen.",
+      "icon": "key",
+      "status": "completed"
+    },
+    {
+      "rank": 3,
+      "title": "My Hero Academia",
+      "blurb": "My comfort series — earnest in a way I'll always respect.",
+      "icon": "plus-ultra",
+      "status": "watching"
+    }
+  ]
+}

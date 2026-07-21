@@ -1,0 +1,32 @@
+{
+  "_readme": "Headings and nav labels for each page section. 'navLabel' is the word in the top navigation; 'title' renders in the section header; 'subtitle' is optional and most sections omit it. Section order on the page is fixed by the layout, not this file. Field docs: src/lib/content.ts.",
+  "about": {
+    "navLabel": "About",
+    "title": "About"
+  },
+  "experience": {
+    "navLabel": "Experience",
+    "title": "Experience"
+  },
+  "projects": {
+    "navLabel": "Projects",
+    "title": "Projects"
+  },
+  "credentials": {
+    "navLabel": "Skills",
+    "title": "Skills & Education"
+  },
+  "offTheClock": {
+    "navLabel": "Off the clock",
+    "title": "Off the clock"
+  },
+  "contact": {
+    "navLabel": "Contact",
+    "title": "Get in touch",
+    "subtitle": "I'm open to software, research, and internship opportunities — email is the fastest way to reach me."
+  },
+  "notFound": {
+    "title": "404 — this world line doesn't exist.",
+    "cta": "Return to the Steins Gate world line"
+  }
+}

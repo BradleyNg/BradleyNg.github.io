@@ -1,0 +1,49 @@
+{
+  "_readme": "One entry per project card. Display order = array order. To hide a project, add \"hidden\": true. 'links' keys (repo/demo/devpost/writeup) are all optional — omit what doesn't exist and nothing renders. 'timeframe' is an optional small date label. 'visuals' is a list of images/GIFs; if empty (or a file is missing) the card shows a styled 'awaiting capture' frame instead of breaking. Image files go in public/images/projects/. Wrap key numbers in **double asterisks**. Field docs: src/lib/content.ts.",
+  "entries": [
+    {
+      "title": "Spectra",
+      "timeframe": "Jan – May 2026",
+      "tagline": "ACM Research — stress-testing vision-language models against visual prompt injection.",
+      "category": "AI Security Research",
+      "description": "Visual prompt injection hides malicious instructions inside images — invisible to people, obeyed by vision-language models, and **OWASP's top LLM security risk**. As one of four researchers, I helped stress-test **13 open VLMs** against a full spectrum of attacks across **3,200+ medical scans**, cutting attack success from **90.9% to 26%** on Gemma-3 and Qwen-2.5. The headline result: **simple, fast preprocessing defenses nearly eliminated some attacks at production-ready speeds**, while several intuitive defenses backfired and left models more vulnerable.",
+      "highlights": ["90.9% → 26% attack success", "13 VLMs benchmarked", "production-ready defenses"],
+      "tech": ["Python", "Hugging Face Transformers", "Vision-Language Models", "Model Evaluation", "Google Colab"],
+      "links": {},
+      "visuals": []
+    },
+    {
+      "title": "SpinStack",
+      "timeframe": "Aug – Dec 2025",
+      "tagline": "ACM Projects — a mobile social-music app for the 10-to-30-second moments that hit hardest in a song.",
+      "category": "Full-Stack",
+      "description": "Instead of whole tracks, SpinStack is built around **song moments** — short snippets personalized with captions and cover art, collected into **vinyl-style stacks**. Friends discover music through each other: a Pinterest-style vertical feed, stacks followed like shared musical journals, and a **daily group prompt** where friends post and rate each other's picks. I built the backend — REST APIs on Node.js, Express, and TypeScript over Supabase/PostgreSQL and S3 — reaching **sub-200ms** search and playback flows and presenting to a panel of five industry judges.",
+      "highlights": ["sub-200ms search", "−30% query latency", "5 industry judges"],
+      "tech": ["TypeScript", "Node.js", "Express.js", "Supabase", "PostgreSQL", "Amazon S3"],
+      "links": {},
+      "visuals": []
+    },
+    {
+      "title": "MEMEoTron",
+      "timeframe": "Nov 2025",
+      "tagline": "HackUTD 2025 — a multimodal agentic workflow that turns viral memes into culturally aware insights for market researchers.",
+      "category": "Hackathon",
+      "description": "Extracts linguistic and spatial metadata from viral images — **1,000+ processed at 95% OCR accuracy** — through a Python + Google Cloud Vision pipeline, then pipes the results through a Flask API to web-scraping agents backed by Nvidia's Nemotron, so the system can explain the joke in **under 300ms**.",
+      "highlights": ["95% OCR accuracy", "1,000+ images", "sub-300ms responses"],
+      "tech": ["Python", "Flask", "Google Cloud Vision", "Nvidia Nemotron"],
+      "links": { "devpost": "https://devpost.com/software/memotron" },
+      "visuals": []
+    },
+    {
+      "title": "E-Wise",
+      "timeframe": "Mar 2025",
+      "tagline": "NTHS Hack 2025 — diagnose a broken device from a single photo.",
+      "category": "Hackathon",
+      "description": "Upload one photo of a broken device and E-Wise identifies the component, suggests repairs, and points to nearby recycling locations — a responsive HTML/CSS/JavaScript front end feeding a Python pipeline of **10 integrated APIs**. Refined through live user testing (**~30% faster navigation**) and placed **top 30 of 100+ teams**.",
+      "highlights": ["top 30 / 100+ teams", "10 APIs integrated", "~30% faster navigation"],
+      "tech": ["HTML", "CSS", "JavaScript", "Python"],
+      "links": { "devpost": "https://devpost.com/software/e-wise" },
+      "visuals": []
+    }
+  ]
+}

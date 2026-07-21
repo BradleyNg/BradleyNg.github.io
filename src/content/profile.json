@@ -1,0 +1,40 @@
+{
+  "_readme": "Identity + hero section content. Every field here is plain text unless noted. Field docs: src/lib/content.ts.",
+  "name": "Bradley Nguyen",
+  "headline": "CS @ UT Dallas · Class of 2028",
+  "location": "Plano, TX",
+  "positioning": "I'm a CS student at UT Dallas interested in the intersection of software and human behavior. My work spans research and building — lab tooling and ML pipelines for behavioral neuroscience, AI-security research on vision-language models, and full-stack development.",
+  "email": "bradleynguyen81@gmail.com",
+  "resumeFile": "/resume.pdf",
+  "availability": "open to internships",
+  "meter": {
+    "value": "1.048596",
+    "label": "divergence · steins gate world line",
+    "lightValue": "0.571024",
+    "lightLabel": "divergence · alpha attractor field"
+  },
+  "dmailSubject": "software · research · internships",
+  "links": [
+    { "label": "GitHub", "url": "https://github.com/BradleyNg" },
+    { "label": "LinkedIn", "url": "https://www.linkedin.com/in/bradleyynguyen" },
+    { "label": "Devpost", "url": "https://devpost.com/bradleynguyen81" }
+  ],
+  "metrics": [
+    {
+      "value": "90.9% → 26%",
+      "label": "prompt-injection attack success after the VLM defense pipeline I engineered"
+    },
+    {
+      "value": "35% → 90%+",
+      "label": "frame-level detection from my pose-estimation pipeline at the Parekh Lab"
+    },
+    {
+      "value": "3,200+",
+      "label": "medical scans benchmarked across 13 vision-language models"
+    },
+    {
+      "value": "8 rigs",
+      "label": "hardware rigs running the experiment dashboard I shipped for 6+ researchers"
+    }
+  ]
+}

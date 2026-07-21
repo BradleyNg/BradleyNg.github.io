@@ -1,0 +1,17 @@
+{
+  "_readme": "Skill groups rendered as chips. Display order = array order, both for groups and for items inside each group. Field docs: src/lib/content.ts.",
+  "groups": [
+    {
+      "label": "Languages",
+      "items": ["Java", "C++", "HTML", "CSS", "JavaScript", "TypeScript", "Python", "SQL"]
+    },
+    {
+      "label": "Frameworks & Libraries",
+      "items": ["Next.js", "React", "Tailwind CSS", "Node.js", "Express.js", "FastAPI", "PyTorch", "Hugging Face Transformers"]
+    },
+    {
+      "label": "Developer Tools",
+      "items": ["Git/GitHub", "AWS", "PostgreSQL", "Postman", "Supabase", "Google Colab", "Claude Code", "Google Antigravity"]
+    }
+  ]
+}

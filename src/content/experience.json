@@ -1,0 +1,57 @@
+{
+  "_readme": "One entry per role. Display order = array order (top entry renders first). To hide an entry without deleting it, add \"hidden\": true. Wrap key numbers in **double asterisks** to highlight them. Field docs: src/lib/content.ts.",
+  "entries": [
+    {
+      "role": "Undergraduate Research Assistant",
+      "org": "Parekh Lab for Motivational, Affective, and Cognitive Systems — UT Dallas",
+      "start": "Sep 2025",
+      "end": "Present",
+      "location": "Richardson, TX",
+      "bullets": [
+        "Shipped the lab's full-stack experiment dashboard — Next.js, TypeScript, FastAPI, and SQLAlchemy — generating, compiling, and flashing Arduino firmware (Jinja2, arduino-cli), logging serial data with pyserial, and streaming live camera feeds in-browser for **6+ researchers across 8 hardware rigs**.",
+        "Built a pose-estimation pipeline with PyTorch and DeepLabCut that raised frame-level detection from **35% to 90%+ across 7 keypoints**, by fine-tuning SuperAnimal weights and optimizing detector thresholds and CUDA batch inference.",
+        "Developed a SLEAP tracking pipeline reaching **95%+ detection across 26 multi-hour recordings**, debugging four rounds of training failures to produce behavioral data the lab pairs with neural recordings to study motivated behavior."
+      ],
+      "tech": ["Next.js", "TypeScript", "FastAPI", "SQLAlchemy", "PyTorch", "DeepLabCut", "SLEAP", "CUDA"]
+    },
+    {
+      "role": "Undergraduate Researcher — AI Security",
+      "org": "ACM UTD",
+      "start": "Jan 2026",
+      "end": "May 2026",
+      "location": "Richardson, TX",
+      "bullets": [
+        "Built **Spectra**, a defense pipeline hardening vision-language models against prompt injection, cutting attack success from **90.9% to 26%** on Gemma-3 and Qwen-2.5 via input validation, prompt-level security boundaries, and prompt isolation.",
+        "Benchmarked AI security across **13 large vision-language models**, then evaluated 12 defenses against 6 image-based injection attacks on Gemma-3, Llama-3.2, and Qwen-2.5 over **3,200+ medical scans** with GPU-accelerated inference.",
+        "Sustained real-time inference at **0.315s** on Qwen-2.5 during attack mitigation, by designing lightweight prompt-based filtering that blocks malicious visual overlays without modifying model architecture."
+      ],
+      "tech": ["Python", "Hugging Face Transformers", "GPU inference"]
+    },
+    {
+      "role": "Software Engineer — ACM Projects",
+      "org": "ACM UTD",
+      "start": "Aug 2025",
+      "end": "Dec 2025",
+      "location": "Richardson, TX",
+      "bullets": [
+        "Delivered **SpinStack**, a Spotify-integrated social-music platform, with a team of five, presented to a panel of **5 industry judges**.",
+        "Cut database query latency **30%** by building RESTful APIs with Node.js, Express, TypeScript, and Supabase.",
+        "Reached **sub-200ms** response times on cross-entity search and music-playback flows by integrating Supabase full-text queries with the Spotify Web SDK."
+      ],
+      "tech": ["Node.js", "Express", "TypeScript", "Supabase", "Spotify Web SDK"]
+    },
+    {
+      "role": "Coding Instructor",
+      "org": "iCode School — McKinney",
+      "start": "Nov 2024",
+      "end": "Jul 2025",
+      "location": "McKinney, TX",
+      "bullets": [
+        "Drove a **25% increase** in project completion across 30+ students by building an adaptable Python, Java, and VEX Robotics curriculum with multiple learning paths tuned to each student's level.",
+        "Boosted retention across 15+ summer-camp students with project-based programs in Construct 3 game development and YouTube/CapCut content creation, built around students' own interests.",
+        "Coached debugging through guided questioning — walking students back through their own reasoning until they found the bug themselves, instead of handing over answers."
+      ],
+      "tech": ["Python", "Java", "VEX Robotics", "Construct 3"]
+    }
+  ]
+}
