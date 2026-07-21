@@ -12,82 +12,87 @@ const { index } = Astro.props;
 // working: the newest role leads on the single line, and everything after it
 // alternates between the left and right branches.
 //   0        → lead   (centre line)
-//   1, 3, 5… → left   (--wl-track -1)
-//   2, 4, 6… → right  (--wl-track  1)
+//   1, 3, 5… → left   (data-track -1)
+//   2, 4, 6… → right  (data-track  1)
 const trackOf = (i: number): -1 | 0 | 1 => (i === 0 ? 0 : i % 2 === 1 ? -1 : 1);
 const lastIndex = experience.length - 1;
+const forked = experience.length > 1;
 ---
 
 <Section id="experience" index={index} {...sections.experience}>
   {/* The rail is the observed world line. Dates render as scene-timestamp
       chips, as elsewhere on the site. */}
-  <ol class="wl border-y border-line" data-wl="diverged">
-    {
-      experience.map((job, i) => {
-        const track = trackOf(i);
-        return (
-          <li
-            class:list={[
-              'wl-entry border-b border-line py-9 last:border-b-0 md:py-10',
-              i === 0 && 'wl-entry--lead',
-              i === lastIndex && 'wl-entry--tail',
-            ]}
-            data-track={track}
-            data-reveal
-          >
-            <span class="wl-seg" aria-hidden="true" />
-            <span class="wl-tick" aria-hidden="true" />
+  <div class="wl" data-wl="diverged">
+    <ol class="border-y border-line">
+      {
+        experience.map((job, i) => {
+          const track = trackOf(i);
+          return (
+            <li
+              class:list={[
+                'wl-entry border-b border-line py-9 last:border-b-0 md:py-10',
+                i === 0 && 'wl-entry--lead',
+                i === lastIndex && 'wl-entry--tail',
+              ]}
+              data-track={track}
+              data-reveal
+            >
+              <span class="wl-seg" aria-hidden="true" />
+              <span class="wl-tick" aria-hidden="true" />
 
-            {/* viewBox min-x stays 0: with a negative min-x a 50%
-                transform-origin resolves to the wrong coordinate, and the
-                collapse lands on the edge instead of the centre line. */}
-            {i === 0 && experience.length > 1 && (
-              <svg class="wl-fork hidden lg:block" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
-                <g class="wl-branch">
-                  <path d="M 100 0 L 100 18 L 0 46 L 0 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-                  <path d="M 100 0 L 100 18 L 200 46 L 200 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-                </g>
-              </svg>
-            )}
-            {i === lastIndex && experience.length > 1 && (
-              <svg class="wl-merge hidden lg:block" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
-                <g class="wl-branch">
-                  <path d="M 0 0 L 0 34 L 100 62 L 100 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-                  <path d="M 200 0 L 200 34 L 100 62 L 100 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-                </g>
-              </svg>
-            )}
+              {/* viewBox min-x stays 0: with a negative min-x a 50%
+                  transform-origin resolves to the wrong coordinate, and the
+                  collapse lands on the edge instead of the centre line. */}
+              {i === 0 && forked && (
+                <svg class="wl-fork hidden lg:block" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                  <g class="wl-branch">
+                    <path d="M 100 0 L 100 18 L 0 46 L 0 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+                    <path d="M 100 0 L 100 18 L 200 46 L 200 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+                  </g>
+                </svg>
+              )}
+              {i === lastIndex && forked && (
+                <svg class="wl-merge hidden lg:block" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                  <g class="wl-branch">
+                    <path d="M 0 0 L 0 34 L 100 62 L 100 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+                    <path d="M 200 0 L 200 34 L 100 62 L 100 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+                  </g>
+                </svg>
+              )}
 
-            <div class="grid gap-4 md:grid-cols-[11.5rem_minmax(0,1fr)] md:gap-8">
-              <div class="font-mono text-xs leading-relaxed">
-                <span class="stamp">
-                  {job.start} — {job.end}
-                </span>
-                <p class="mt-2.5 text-faint">{job.location}</p>
+              <div class="grid gap-4 md:grid-cols-[11.5rem_minmax(0,1fr)] md:gap-8">
+                <div class="font-mono text-xs leading-relaxed">
+                  <span class="stamp">
+                    {job.start} — {job.end}
+                  </span>
+                  <p class="mt-2.5 text-faint">{job.location}</p>
+                </div>
+                <div>
+                  <h3 class="font-display text-lg font-semibold md:text-[1.25rem]">{job.role}</h3>
+                  <p class="mt-1 font-mono text-[0.8125rem] text-muted">{job.org}</p>
+                  <ul class="wl-bullets mt-4 space-y-2.5">
+                    {job.bullets.map((bullet) => (
+                      <li class="content-emphasis flex gap-3 text-[0.9375rem] leading-relaxed text-muted">
+                        <span class="mt-[0.7em] h-px w-3.5 shrink-0 bg-accent-bright" aria-hidden="true" />
+                        <span set:html={emphasize(bullet)} />
+                      </li>
+                    ))}
+                  </ul>
+                  {job.tech.length > 0 && <p class="mt-4 font-mono text-xs leading-relaxed text-faint">{job.tech.join(' · ')}</p>}
+                </div>
               </div>
-              <div>
-                <h3 class="font-display text-lg font-semibold md:text-[1.25rem]">{job.role}</h3>
-                <p class="mt-1 font-mono text-[0.8125rem] text-muted">{job.org}</p>
-                <ul class="mt-4 space-y-2.5">
-                  {job.bullets.map((bullet) => (
-                    <li class="content-emphasis flex gap-3 text-[0.9375rem] leading-relaxed text-muted">
-                      <span class="mt-[0.7em] h-px w-3.5 shrink-0 bg-accent-bright" aria-hidden="true" />
-                      <span set:html={emphasize(bullet)} />
-                    </li>
-                  ))}
-                </ul>
-                {job.tech.length > 0 && <p class="mt-4 font-mono text-xs leading-relaxed text-faint">{job.tech.join(' · ')}</p>}
-              </div>
-            </div>
-          </li>
-        );
-      })
-    }
+            </li>
+          );
+        })
+      }
+    </ol>
 
     <span class="wl-orb wl-orb--lead" aria-hidden="true"></span>
     <span class="wl-orb wl-orb--left" aria-hidden="true"></span>
     <span class="wl-orb wl-orb--right" aria-hidden="true"></span>
-  </ol>
+    {/* sits exactly where the branches merge — the lights' final meeting point */}
+    <span class="wl-end" aria-hidden="true"></span>
+  </div>
 </Section>
 
 <script>
@@ -96,11 +101,13 @@ const lastIndex = experience.length - 1;
   //
   // The lights leapfrog rather than move together — the left light advances
   // to left-track roles and the right light to right-track roles, so they
-  // alternate in step with the roles themselves.
+  // alternate in step with the roles themselves. Past the last role both
+  // ride down to the merge point and land as one.
   const list = document.querySelector<HTMLElement>('.wl');
   const rows = list ? [...list.querySelectorAll<HTMLElement>('.wl-entry')] : [];
+  const end = list?.querySelector<HTMLElement>('.wl-end');
 
-  if (list && rows.length > 0) {
+  if (list && end && rows.length > 0) {
     const orbs = {
       lead: list.querySelector<HTMLElement>('.wl-orb--lead'),
       left: list.querySelector<HTMLElement>('.wl-orb--left'),
@@ -110,12 +117,16 @@ const lastIndex = experience.length - 1;
     const anchorOf = (row: HTMLElement) => row.offsetTop + 42;
     // where the branch lights wait before their first role
     const forkY = () => rows[0]!.offsetTop + rows[0]!.offsetHeight - 40;
+    const mergeY = () => end.offsetTop;
 
     let active = 0;
 
     function paint() {
-      if (!list) return;
-      list.dataset.wl = active <= 0 ? 'converged' : 'diverged';
+      if (!list || !end) return;
+      // past the end of the list, the two lights converge into one
+      const past = end.getBoundingClientRect().top <= window.innerHeight * 0.5;
+      const state = past ? 'merged' : active <= 0 ? 'converged' : 'diverged';
+      list.dataset.wl = state;
 
       // highest-indexed role reached on each branch
       let leftRow = -1;
@@ -126,19 +137,22 @@ const lastIndex = experience.length - 1;
       }
 
       const y = {
-        lead: anchorOf(rows[0]!),
-        left: leftRow >= 0 ? anchorOf(rows[leftRow]!) : forkY(),
-        right: rightRow >= 0 ? anchorOf(rows[rightRow]!) : forkY(),
+        // while forked the lead light waits at the fork, so leaving and
+        // re-entering the converged state reads as a split and a rejoin
+        lead: state === 'converged' ? anchorOf(rows[0]!) : forkY(),
+        left: state === 'merged' ? mergeY() : leftRow >= 0 ? anchorOf(rows[leftRow]!) : forkY(),
+        right: state === 'merged' ? mergeY() : rightRow >= 0 ? anchorOf(rows[rightRow]!) : forkY(),
       };
       list.style.setProperty('--wl-orb-lead-y', `${y.lead}px`);
       list.style.setProperty('--wl-orb-left-y', `${y.left}px`);
       list.style.setProperty('--wl-orb-right-y', `${y.right}px`);
 
       // the light level with the row being read is the current one
-      const currentKey = active <= 0 ? 'lead' : active % 2 === 1 ? 'left' : 'right';
+      const currentKey = state === 'merged' ? null : active <= 0 ? 'lead' : active % 2 === 1 ? 'left' : 'right';
       for (const [key, orb] of Object.entries(orbs)) {
         orb?.classList.toggle('is-current', key === currentKey);
       }
+      rows.forEach((row, i) => row.classList.toggle('is-reading', state !== 'merged' && i === active));
     }
 
     // Bottom-most row in the middle band wins — the same rule the nav and
@@ -152,14 +166,14 @@ const lastIndex = experience.length - 1;
           if (entry.isIntersecting) inBand.add(i);
           else inBand.delete(i);
         }
-        if (inBand.size > 0) {
-          active = Math.max(...inBand);
-          paint();
-        }
+        if (inBand.size > 0) active = Math.max(...inBand);
+        paint();
       },
       { rootMargin: '-40% 0px -40% 0px' }
     );
     rows.forEach((row) => io.observe(row));
+    // the sentinel fires the callback as the section's end crosses the band
+    io.observe(end);
 
     paint();
     window.addEventListener('resize', paint, { passive: true });

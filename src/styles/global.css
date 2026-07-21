@@ -501,6 +501,7 @@ html[data-scene='contact'] #backdrop .scene-contact {
   --wl-s-max: 2.25rem; /* half the gap between branches once diverged */
   --wl-s: var(--wl-s-max); /* current half-gap — 0 while converged */
   --wl-gap: 2.25rem; /* line → card breathing room */
+  --wl-orb-x: 1; /* 0 pulls the lights back onto the centre line */
   position: relative;
 }
 @media (min-width: 1280px) {
@@ -513,18 +514,36 @@ html[data-scene='contact'] #backdrop .scene-contact {
 .wl[data-wl='converged'] {
   --wl-s: 0rem;
 }
+/* Past the last role the rail stays forked, but the lights slide back to
+   the centre and meet at the merge point. */
+.wl[data-wl='merged'] {
+  --wl-orb-x: 0;
+}
 
-/* Each row's horizontal offset from the centre line, by track. */
+/* Each row's horizontal offset from the centre line, by track. Driven by
+   the live --wl-s, so cards spread outward as the lines diverge — that
+   travel is what reads as the pull-back. */
 .wl-entry {
   --wl-off: 0rem;
   position: relative;
   padding-left: calc(var(--wl-c) + var(--wl-off) + var(--wl-gap));
+  transition: padding-left 0.6s ease-out;
+}
+/* These rows also carry [data-reveal], whose transition shorthand would
+   otherwise win and make the indent snap instead of glide — so the reveal
+   and the spread are declared together here. */
+.js .wl-entry[data-reveal] {
+  transition:
+    opacity 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    translate 0.6s cubic-bezier(0.22, 1, 0.36, 1),
+    padding-left 0.6s ease-out;
+  transition-delay: var(--reveal-delay, 0ms), var(--reveal-delay, 0ms), 0ms;
 }
 .wl-entry[data-track='-1'] {
-  --wl-off: calc(0rem - var(--wl-s-max));
+  --wl-off: calc(0rem - var(--wl-s));
 }
 .wl-entry[data-track='1'] {
-  --wl-off: var(--wl-s-max);
+  --wl-off: var(--wl-s);
 }
 /* room under the first/last rows for the fork and the merge */
 .wl-entry--lead {
@@ -548,8 +567,19 @@ html[data-scene='contact'] #backdrop .scene-contact {
   bottom: 0;
   left: var(--wl-c);
   width: 1px;
-  background: var(--line-strong);
+  /* dashed and flowing, like the world lines in the backdrop */
+  background-image: repeating-linear-gradient(to bottom, var(--line-strong) 0 7px, transparent 7px 10px);
+  background-size: 1px 10px;
   transition: transform 0.6s ease-out;
+}
+.js .wl-seg::before,
+.js .wl-seg::after {
+  animation: wl-rail-flow 1.8s linear infinite;
+}
+@keyframes wl-rail-flow {
+  to {
+    background-position: 0 10px;
+  }
 }
 .wl-seg::before {
   transform: translateX(calc(-1 * var(--wl-s)));
@@ -596,8 +626,24 @@ html[data-scene='contact'] #backdrop .scene-contact {
   transform-origin: 50% 50%;
   transition: transform 0.6s ease-out;
 }
+.wl-branch path {
+  stroke-dasharray: 7 3;
+}
+.js .wl-branch path {
+  animation: wl-flow 1.8s linear infinite;
+}
 .wl[data-wl='converged'] .wl-branch {
   --wl-fork-scale: 0.001;
+}
+
+/* the point where the branches rejoin — also the lights' meeting place */
+.wl-end {
+  position: absolute;
+  left: var(--wl-c);
+  bottom: -4.5rem;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
 
 /* the travelling lights */
@@ -623,10 +669,29 @@ html[data-scene='contact'] #backdrop .scene-contact {
   transform: translate(0, var(--wl-orb-lead-y, 0));
 }
 .wl-orb--left {
-  transform: translate(calc(-1 * var(--wl-s)), var(--wl-orb-left-y, 0));
+  transform: translate(calc(-1 * var(--wl-s) * var(--wl-orb-x)), var(--wl-orb-left-y, 0));
 }
 .wl-orb--right {
-  transform: translate(var(--wl-s), var(--wl-orb-right-y, 0));
+  transform: translate(calc(var(--wl-s) * var(--wl-orb-x)), var(--wl-orb-right-y, 0));
+}
+/* Hand-off at the fork: the lead light slides down to the fork and only
+   then fades, while the two branch lights emerge from that same point —
+   so it reads as one light splitting rather than a swap. */
+.wl[data-wl='diverged'] .wl-orb--lead,
+.wl[data-wl='merged'] .wl-orb--lead {
+  transition-delay: 0s, 0.3s, 0s, 0s;
+}
+.wl[data-wl='diverged'] .wl-orb--left,
+.wl[data-wl='diverged'] .wl-orb--right {
+  transition-delay: 0s, 0.22s, 0s, 0s;
+}
+/* Converged again at the end: both lights ride down to the merge point and
+   land on top of each other as a single light. */
+.wl[data-wl='merged'] .wl-orb--left,
+.wl[data-wl='merged'] .wl-orb--right {
+  background: var(--accent-bright);
+  box-shadow: 0 0 0 4px var(--glow), 0 0 14px var(--glow);
+  opacity: 1;
 }
 /* the light beside the row you are reading burns amber; the trailing one
    stays a dim world-line blue (brightness, not another looping pulse) */
@@ -637,8 +702,34 @@ html[data-scene='contact'] #backdrop .scene-contact {
 }
 .wl[data-wl='converged'] .wl-orb--left,
 .wl[data-wl='converged'] .wl-orb--right,
-.wl[data-wl='diverged'] .wl-orb--lead {
+.wl[data-wl='diverged'] .wl-orb--lead,
+.wl[data-wl='merged'] .wl-orb--lead {
   opacity: 0;
+}
+
+/* Mini world lines: the role's line branches once more into a spine that
+   feeds each achievement's dash. */
+.wl-bullets {
+  position: relative;
+}
+.wl-bullets::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0.95rem;
+  bottom: 0.75rem;
+  width: 1px;
+  background-image: repeating-linear-gradient(to bottom, var(--line-strong) 0 5px, transparent 5px 8px);
+  background-size: 1px 8px;
+}
+/* only the role being read has a live spine — keeps the motion budget low */
+.js .wl-entry.is-reading .wl-bullets::before {
+  animation: wl-spine-flow 1.4s linear infinite;
+}
+@keyframes wl-spine-flow {
+  to {
+    background-position: 0 8px;
+  }
 }
 
 /* Small screens have no room to fork: one line, one column. */
@@ -747,11 +838,19 @@ html[data-scene='contact'] #backdrop .scene-contact {
     translate: none;
     transition: none;
   }
+  .wl-entry,
+  .js .wl-entry[data-reveal],
   .wl-seg::before,
   .wl-seg::after,
   .wl-branch,
   .wl-orb {
     transition: none;
+  }
+  .js .wl-seg::before,
+  .js .wl-seg::after,
+  .js .wl-branch path,
+  .js .wl-entry.is-reading .wl-bullets::before {
+    animation: none;
   }
   .cursor-blink,
   .js #wl-flash.wl-flash-run,
