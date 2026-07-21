@@ -8,78 +8,76 @@ interface Props {
 }
 const { index } = Astro.props;
 
-// Track assignment is purely index-driven, so editing experience.json keeps
-// working: the newest role leads on the single line, and everything after it
-// alternates between the left and right branches.
-//   0        → lead   (centre line)
-//   1, 3, 5… → left   (data-track -1)
-//   2, 4, 6… → right  (data-track  1)
-const trackOf = (i: number): -1 | 0 | 1 => (i === 0 ? 0 : i % 2 === 1 ? -1 : 1);
+// Placement is index-driven, so editing experience.json keeps working:
+//   0        → lead, alone on the single line, spanning both columns
+//   1, 3, 5… → left column, on the line that continues straight down
+//   2, 4, 6… → right column, on the line that branches off
+// Roles pair up by stage: stage 1 is roles 1–2, stage 2 is roles 3–4, and so
+// on, so each stage is one screenful.
+const placement = experience.map((_, i) => ({
+  track: i === 0 ? ('lead' as const) : i % 2 === 1 ? ('left' as const) : ('right' as const),
+  stage: i === 0 ? 0 : Math.floor((i - 1) / 2) + 1,
+  row: i === 0 ? 1 : Math.floor((i - 1) / 2) + 2,
+}));
 const lastIndex = experience.length - 1;
 const forked = experience.length > 1;
 ---
 
 <Section id="experience" index={index} {...sections.experience}>
-  {/* The rail is the observed world line. Dates render as scene-timestamp
-      chips, as elsewhere on the site. */}
   <div class="wl" data-wl="diverged">
-    <ol class="border-y border-line">
+    {/* rails and junctions sit behind the roles; positions come from the
+        script below, which measures the cards once and on resize */}
+    <span class="wl-rail wl-rail--lead" aria-hidden="true"></span>
+    {
+      forked && (
+        <>
+          <span class="wl-rail wl-rail--left" aria-hidden="true" />
+          <span class="wl-rail wl-rail--right" aria-hidden="true" />
+          {/* viewBox min-x stays 0 — a negative min-x makes a 50%
+              transform-origin resolve to the wrong coordinate */}
+          <svg class="wl-fork" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
+            <path d="M 0 0 L 0 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+            <path d="M 0 0 L 0 16 L 200 56 L 200 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+          </svg>
+          <svg class="wl-merge" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
+            <path d="M 0 0 L 0 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+            <path d="M 200 0 L 200 24 L 0 64 L 0 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+          </svg>
+        </>
+      )
+    }
+
+    <ol class="wl-list">
       {
         experience.map((job, i) => {
-          const track = trackOf(i);
+          const { track, stage, row } = placement[i]!;
           return (
-            <li
-              class:list={[
-                'wl-entry border-b border-line py-9 last:border-b-0 md:py-10',
-                i === 0 && 'wl-entry--lead',
-                i === lastIndex && 'wl-entry--tail',
-              ]}
-              data-track={track}
-              data-reveal
-            >
-              <span class="wl-seg" aria-hidden="true" />
-              <span class="wl-tick" aria-hidden="true" />
-
-              {/* viewBox min-x stays 0: with a negative min-x a 50%
-                  transform-origin resolves to the wrong coordinate, and the
-                  collapse lands on the edge instead of the centre line. */}
-              {i === 0 && forked && (
-                <svg class="wl-fork hidden lg:block" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
-                  <g class="wl-branch">
-                    <path d="M 100 0 L 100 18 L 0 46 L 0 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-                    <path d="M 100 0 L 100 18 L 200 46 L 200 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-                  </g>
-                </svg>
-              )}
-              {i === lastIndex && forked && (
-                <svg class="wl-merge hidden lg:block" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
-                  <g class="wl-branch">
-                    <path d="M 0 0 L 0 34 L 100 62 L 100 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-                    <path d="M 200 0 L 200 34 L 100 62 L 100 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-                  </g>
-                </svg>
-              )}
-
-              <div class="grid gap-4 md:grid-cols-[11.5rem_minmax(0,1fr)] md:gap-8">
+            <li class:list={['wl-entry', `wl-entry--${track}`]} style={`grid-row: ${row}`} data-stage={stage} data-track={track}>
+              <div class="wl-card" data-reveal>
                 <div class="font-mono text-xs leading-relaxed">
                   <span class="stamp">
                     {job.start} — {job.end}
                   </span>
                   <p class="mt-2.5 text-faint">{job.location}</p>
                 </div>
-                <div>
-                  <h3 class="font-display text-lg font-semibold md:text-[1.25rem]">{job.role}</h3>
-                  <p class="mt-1 font-mono text-[0.8125rem] text-muted">{job.org}</p>
-                  <ul class="wl-bullets mt-4 space-y-2.5">
-                    {job.bullets.map((bullet) => (
-                      <li class="content-emphasis flex gap-3 text-[0.9375rem] leading-relaxed text-muted">
-                        <span class="mt-[0.7em] h-px w-3.5 shrink-0 bg-accent-bright" aria-hidden="true" />
-                        <span set:html={emphasize(bullet)} />
-                      </li>
-                    ))}
-                  </ul>
-                  {job.tech.length > 0 && <p class="mt-4 font-mono text-xs leading-relaxed text-faint">{job.tech.join(' · ')}</p>}
-                </div>
+                <h3
+                  class:list={[
+                    'font-display mt-5 font-semibold',
+                    i === 0 ? 'text-2xl md:text-[1.75rem]' : 'text-lg md:text-[1.25rem]',
+                  ]}
+                >
+                  {job.role}
+                </h3>
+                <p class="mt-1 font-mono text-[0.8125rem] text-muted">{job.org}</p>
+                <ul class="wl-bullets mt-5 space-y-2.5">
+                  {job.bullets.map((bullet) => (
+                    <li class="content-emphasis flex gap-3 text-[0.9375rem] leading-relaxed text-muted">
+                      <span class="mt-[0.7em] h-px w-3.5 shrink-0 bg-accent-bright" aria-hidden="true" />
+                      <span set:html={emphasize(bullet)} />
+                    </li>
+                  ))}
+                </ul>
+                {job.tech.length > 0 && <p class="mt-4 font-mono text-xs leading-relaxed text-faint">{job.tech.join(' · ')}</p>}
               </div>
             </li>
           );
@@ -90,92 +88,249 @@ const forked = experience.length > 1;
     <span class="wl-orb wl-orb--lead" aria-hidden="true"></span>
     <span class="wl-orb wl-orb--left" aria-hidden="true"></span>
     <span class="wl-orb wl-orb--right" aria-hidden="true"></span>
-    {/* sits exactly where the branches merge — the lights' final meeting point */}
-    <span class="wl-end" aria-hidden="true"></span>
   </div>
 </Section>
 
 <script>
-  // Drives the divergence: which role is being read decides whether the rail
-  // is converged or forked, and where each light sits.
+  // Runs the staged divergence: which role is being read decides the rail
+  // state, which stage is in focus, and where each light sits.
   //
-  // The lights leapfrog rather than move together — the left light advances
-  // to left-track roles and the right light to right-track roles, so they
-  // alternate in step with the roles themselves. Past the last role both
-  // ride down to the merge point and land as one.
-  const list = document.querySelector<HTMLElement>('.wl');
-  const rows = list ? [...list.querySelectorAll<HTMLElement>('.wl-entry')] : [];
-  const end = list?.querySelector<HTMLElement>('.wl-end');
+  // The lights leapfrog — the left one advances to left-column roles and the
+  // right one to right-column roles — and the fork hand-off is sequenced in
+  // three beats, because CSS alone starts the branch lights moving before
+  // they have faded in, which reads as them spawning at their destinations.
+  const wl = document.querySelector<HTMLElement>('.wl');
+  const entries = wl ? [...wl.querySelectorAll<HTMLElement>('.wl-entry')] : [];
+  const cards = entries.map((e) => e.querySelector<HTMLElement>('.wl-card')!);
 
-  if (list && end && rows.length > 0) {
+  if (wl && entries.length > 0) {
     const orbs = {
-      lead: list.querySelector<HTMLElement>('.wl-orb--lead'),
-      left: list.querySelector<HTMLElement>('.wl-orb--left'),
-      right: list.querySelector<HTMLElement>('.wl-orb--right'),
+      lead: wl.querySelector<HTMLElement>('.wl-orb--lead'),
+      left: wl.querySelector<HTMLElement>('.wl-orb--left'),
+      right: wl.querySelector<HTMLElement>('.wl-orb--right'),
     };
-    // y of a row's light: level with the role heading
-    const anchorOf = (row: HTMLElement) => row.offsetTop + 42;
-    // where the branch lights wait before their first role
-    const forkY = () => rows[0]!.offsetTop + rows[0]!.offsetHeight - 40;
-    const mergeY = () => end.offsetTop;
+    const railRight = wl.querySelector<HTMLElement>('.wl-rail--right');
+    const FORK_H = 80; // matches --wl-fork-h
+    const GAP = 32; // breathing room between a card and its junction
+    const wide = () => window.matchMedia('(min-width: 1024px)').matches;
 
-    let active = 0;
-
-    function paint() {
-      if (!list || !end) return;
-      // past the end of the list, the two lights converge into one
-      const past = end.getBoundingClientRect().top <= window.innerHeight * 0.5;
-      const state = past ? 'merged' : active <= 0 ? 'converged' : 'diverged';
-      list.dataset.wl = state;
-
-      // highest-indexed role reached on each branch
-      let leftRow = -1;
-      let rightRow = -1;
-      for (let i = 1; i <= active; i++) {
-        if (i % 2 === 1) leftRow = i;
-        else rightRow = i;
-      }
-
-      const y = {
-        // while forked the lead light waits at the fork, so leaving and
-        // re-entering the converged state reads as a split and a rejoin
-        lead: state === 'converged' ? anchorOf(rows[0]!) : forkY(),
-        left: state === 'merged' ? mergeY() : leftRow >= 0 ? anchorOf(rows[leftRow]!) : forkY(),
-        right: state === 'merged' ? mergeY() : rightRow >= 0 ? anchorOf(rows[rightRow]!) : forkY(),
+    // Geometry, remeasured on resize. Everything is relative to .wl, which is
+    // the offset parent for the absolutely positioned rails and lights.
+    let geo = { fork: 0, branchTop: 0, branchH: 0, mergeTop: 0, merge: 0, rightX: 0 };
+    function measure() {
+      const lead = cards[0]!;
+      const fork = lead.offsetTop + lead.offsetHeight + GAP;
+      const branchTop = fork + FORK_H;
+      let lowest = branchTop;
+      for (let i = 1; i < cards.length; i++) lowest = Math.max(lowest, cards[i]!.offsetTop + cards[i]!.offsetHeight);
+      const mergeTop = lowest + GAP;
+      geo = {
+        fork,
+        branchTop,
+        branchH: Math.max(0, mergeTop - branchTop),
+        mergeTop,
+        merge: mergeTop + FORK_H,
+        rightX: railRight ? railRight.offsetLeft : 0,
       };
-      list.style.setProperty('--wl-orb-lead-y', `${y.lead}px`);
-      list.style.setProperty('--wl-orb-left-y', `${y.left}px`);
-      list.style.setProperty('--wl-orb-right-y', `${y.right}px`);
-
-      // the light level with the row being read is the current one
-      const currentKey = state === 'merged' ? null : active <= 0 ? 'lead' : active % 2 === 1 ? 'left' : 'right';
-      for (const [key, orb] of Object.entries(orbs)) {
-        orb?.classList.toggle('is-current', key === currentKey);
-      }
-      rows.forEach((row, i) => row.classList.toggle('is-reading', state !== 'merged' && i === active));
+      wl!.style.setProperty('--wl-fork-y', `${geo.fork}px`);
+      wl!.style.setProperty('--wl-branch-top', `${geo.branchTop}px`);
+      wl!.style.setProperty('--wl-branch-h', `${geo.branchH}px`);
+      wl!.style.setProperty('--wl-merge-top', `${geo.mergeTop}px`);
     }
 
-    // Bottom-most row in the middle band wins — the same rule the nav and
-    // backdrop use, so oscillating at a boundary can't strand the state.
-    const inBand = new Set<number>();
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const i = rows.indexOf(entry.target as HTMLElement);
-          if (i < 0) continue;
-          if (entry.isIntersecting) inBand.add(i);
-          else inBand.delete(i);
-        }
-        if (inBand.size > 0) active = Math.max(...inBand);
-        paint();
-      },
-      { rootMargin: '-40% 0px -40% 0px' }
-    );
-    rows.forEach((row) => io.observe(row));
-    // the sentinel fires the callback as the section's end crosses the band
-    io.observe(end);
+    // a light sits level with the role's heading
+    const anchorOf = (i: number) => cards[i]!.offsetTop + cards[i]!.offsetHeight * 0.18;
+    const setY = (key: 'lead' | 'left' | 'right', y: number) => wl!.style.setProperty(`--wl-orb-${key}-y`, `${y}px`);
 
-    paint();
-    window.addEventListener('resize', paint, { passive: true });
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const forked = cards.length > 1; // frontmatter values don't reach this script
+    const stageOf = (i: number) => (i === 0 ? 0 : Math.floor((i - 1) / 2) + 1);
+    let active = 0;
+    let activeStage = 0;
+    let paintedStage = -1;
+    let state: 'converged' | 'diverged' | 'merged' = 'converged';
+    // Two independent timers: the fork hand-off sequence, and the beat the
+    // right-hand light waits before following the left one. Kept apart so a
+    // repaint can't be mistaken for a sequence still running.
+    let seqTimers: number[] = [];
+    let followTimer = 0;
+    const clearSeq = () => {
+      seqTimers.forEach(clearTimeout);
+      seqTimers = [];
+      clearTimeout(followTimer);
+    };
+
+    // The furthest role each line has reached by the given stage.
+    function targetsFor(stage: number) {
+      let left = -1;
+      let right = -1;
+      for (let i = 1; i < cards.length; i++) {
+        if (stageOf(i) > stage) break;
+        if (i % 2 === 1) left = i;
+        else right = i;
+      }
+      return { left, right };
+    }
+
+    // Both roles of a stage are on screen at once, so the lights can't be
+    // driven individually by scroll position — the left one leads and the
+    // right follows a beat later, which is the alternation by design.
+    function paintLights(force = false) {
+      if (!force && paintedStage === activeStage) return;
+      paintedStage = activeStage;
+      const t = targetsFor(activeStage);
+      wl!.style.setProperty('--wl-orb-right-x', `${geo.rightX}px`);
+
+      setY('left', t.left >= 0 ? anchorOf(t.left) : geo.fork);
+      orbs.left?.classList.toggle('is-current', t.left >= 0 && stageOf(t.left) === activeStage);
+
+      const rightY = t.right >= 0 ? anchorOf(t.right) : geo.fork;
+      const rightCurrent = t.right >= 0 && stageOf(t.right) === activeStage;
+      const follow = () => {
+        setY('right', rightY);
+        orbs.right?.classList.toggle('is-current', rightCurrent);
+      };
+      clearTimeout(followTimer);
+      if (reduced) follow();
+      else followTimer = window.setTimeout(follow, 340);
+    }
+
+    function apply(next: typeof state) {
+      const prev = state;
+      state = next;
+      wl!.dataset.wl = state;
+
+      // stage focus — one set at a time, reversible in both directions.
+      // Reduced motion keeps every stage readable rather than hiding them.
+      entries.forEach((el) => {
+        const s = Number(el.dataset.stage);
+        el.dataset.vis = !wide() || reduced ? 'active' : s < activeStage ? 'past' : s > activeStage ? 'ahead' : 'active';
+      });
+
+      if (state === 'converged') {
+        clearSeq();
+        paintedStage = -1;
+        setY('lead', anchorOf(0));
+        orbs.lead?.classList.add('is-current');
+        orbs.lead?.classList.add('is-on');
+        orbs.left?.classList.remove('is-on');
+        orbs.right?.classList.remove('is-on');
+        return;
+      }
+
+      if (state === 'merged') {
+        clearSeq();
+        paintedStage = -1;
+        // both lights run down their own lines and meet at the junction
+        orbs.lead?.classList.remove('is-on');
+        orbs.left?.classList.add('is-on');
+        orbs.right?.classList.add('is-on');
+        setY('left', geo.merge);
+        setY('right', geo.merge);
+        wl!.style.setProperty('--wl-orb-right-x', '0px');
+        for (const orb of Object.values(orbs)) orb?.classList.toggle('is-current', orb !== orbs.lead);
+        return;
+      }
+
+      // diverged — only run the hand-off when arriving from another state,
+      // and never let a later repaint cut the sequence short
+      if (prev === 'diverged' || reduced) {
+        // don't let a scroll repaint cut the hand-off short
+        if (seqTimers.length > 0) return;
+        orbs.lead?.classList.remove('is-on');
+        orbs.left?.classList.add('is-on');
+        orbs.right?.classList.add('is-on');
+        paintLights();
+        return;
+      }
+
+      clearSeq();
+      paintedStage = -1;
+      // Beat 1 — the lead light travels down and stops at the intersection,
+      // with the branch lights parked there but not yet visible.
+      setY('lead', geo.fork);
+      setY('left', geo.fork);
+      setY('right', geo.fork);
+      wl!.style.setProperty('--wl-orb-right-x', `${geo.rightX}px`);
+      orbs.lead?.classList.add('is-on');
+      orbs.left?.classList.remove('is-on');
+      orbs.right?.classList.remove('is-on');
+      // Beat 2 — hand-off: the branch lights appear at the fork the lead
+      // light just reached.
+      seqTimers.push(
+        window.setTimeout(() => {
+          orbs.lead?.classList.remove('is-on');
+          orbs.left?.classList.add('is-on');
+          orbs.right?.classList.add('is-on');
+        }, 450)
+      );
+      // Beat 3 — they leave the fork and travel to their own roles.
+      seqTimers.push(
+        window.setTimeout(() => {
+          seqTimers = [];
+          paintLights(true);
+        }, 700)
+      );
+    }
+
+    // Position-based rather than IntersectionObserver: the two roles of a
+    // stage sit side by side, so "whichever is in the band" can't tell them
+    // apart — the right-hand one would always win. The role being read is
+    // the last one whose top has crossed the reading line, which respects
+    // the stagger. It also means the merge keeps evaluating after every card
+    // has left the band.
+    function decide() {
+      // Whichever role's middle is nearest the reading line. A pair's two
+      // cards are far taller than the stagger between them, so "last one
+      // whose top crossed the line" would always resolve to the right-hand
+      // role; comparing centres respects the stagger.
+      const line = window.innerHeight * 0.45;
+      let best = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < cards.length; i++) {
+        const r = cards[i]!.getBoundingClientRect();
+        const dist = Math.abs(r.top + r.height / 2 - line);
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = i;
+        }
+      }
+      active = best;
+      activeStage = stageOf(active);
+      // Merge only once the last role has cleared the reading line, and while
+      // the junction is still low on screen — so both lights are visible for
+      // the run down instead of meeting out of sight.
+      const tail = cards[cards.length - 1]!.getBoundingClientRect().bottom;
+      const pastEnd = forked && tail <= window.innerHeight * 0.55;
+      apply(pastEnd ? 'merged' : active <= 0 ? 'converged' : 'diverged');
+    }
+
+    let queued = false;
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        decide();
+      });
+    };
+
+    measure();
+    state = 'merged'; // anything but the first real state, so beat 1 runs
+    decide();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    window.addEventListener(
+      'resize',
+      () => {
+        measure();
+        decide();
+      },
+      { passive: true }
+    );
+    // a late reflow (fonts) can shift the geometry
+    window.addEventListener('load', () => {
+      measure();
+      decide();
+    });
   }
 </script>
