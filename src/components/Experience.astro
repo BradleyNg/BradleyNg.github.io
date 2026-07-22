@@ -8,245 +8,339 @@ interface Props {
 }
 const { index } = Astro.props;
 
-// Placement is index-driven, so editing experience.json keeps working:
-//   0        → lead, alone on the single line, spanning both columns
-//   1, 3, 5… → left column, on the line that continues straight down
-//   2, 4, 6… → right column, on the line that branches off
-// Roles pair up by stage: stage 1 is roles 1–2, stage 2 is roles 3–4, …
-const placement = experience.map((_, i) => ({
-  track: i === 0 ? ('lead' as const) : i % 2 === 1 ? ('left' as const) : ('right' as const),
-  stage: i === 0 ? 0 : Math.floor((i - 1) / 2) + 1,
-  row: i === 0 ? 1 : Math.floor((i - 1) / 2) + 2,
-}));
-const lastIndex = experience.length - 1;
-const forked = experience.length > 1;
+// Roles group into scroll-pinned sets, index-driven so editing experience.json
+// keeps working: role 0 leads alone on a single line, then roles pair up
+// (1+2, 3+4, …). Every set after the lead runs on TWO world lines — even one
+// holding a single role, so adding a role later just fills the empty side. The
+// line forks leaving the lead and merges again only after the very last set.
+type Job = (typeof experience)[number];
+const sets: Job[][] = [];
+experience.forEach((job, i) => {
+  const s = i === 0 ? 0 : Math.floor((i - 1) / 2) + 1;
+  (sets[s] ??= []).push(job);
+});
+const forkAt = sets.length > 1 ? 1 : -1;
+const mergeAt = sets.length > 1 ? sets.length - 1 : -1;
 ---
 
 <Section id="experience" index={index} {...sections.experience}>
-  <div class="wl" data-fork="off" data-merge="off">
-    {/* rails and junctions sit behind the roles; positions and heights come
-        from the script below, which measures the cards once and on resize */}
-    <span class="wl-rail wl-rail--lead" aria-hidden="true"></span>
-    {
-      forked && (
-        <>
-          <span class="wl-rail wl-rail--left" aria-hidden="true" />
-          <span class="wl-rail wl-rail--right" aria-hidden="true" />
-          {/* viewBox min-x stays 0 so a 50% origin resolves correctly */}
-          <svg class="wl-fork" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
-            <path d="M 0 0 L 0 16 L 200 56 L 200 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-          </svg>
-          <svg class="wl-merge" viewBox="0 0 200 80" preserveAspectRatio="none" fill="none" aria-hidden="true">
-            <path d="M 200 0 L 200 24 L 0 64 L 0 80" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
-          </svg>
-        </>
-      )
-    }
-
+  <div class="wl">
     <ol class="wl-list">
       {
-        experience.map((job, i) => {
-          const { track, stage, row } = placement[i]!;
+        sets.map((set, s) => {
+          const tracks = s === 0 ? 1 : 2;
+          const fork = s === forkAt;
+          const merge = s === mergeAt;
           return (
-            <li class:list={['wl-entry', `wl-entry--${track}`]} style={`grid-row: ${row}`} data-stage={stage} data-track={track}>
-              <div class="wl-card">
-                <div class="font-mono text-xs leading-relaxed">
-                  <span class="stamp">
-                    {job.start} — {job.end}
-                  </span>
-                  <p class="mt-2.5 text-faint">{job.location}</p>
-                </div>
-                <h3 class="font-display mt-5 text-lg font-semibold md:text-[1.3rem]">{job.role}</h3>
-                <p class="mt-1 font-mono text-[0.8125rem] text-muted">{job.org}</p>
-                <ul class="wl-bullets mt-5 space-y-2.5">
-                  {job.bullets.map((bullet) => (
-                    <li class="content-emphasis flex gap-3 text-[0.9375rem] leading-relaxed text-muted">
-                      <span class="mt-[0.7em] h-px w-3.5 shrink-0 bg-accent-bright" aria-hidden="true" />
-                      <span set:html={emphasize(bullet)} />
-                    </li>
+            <li
+              class="wl-stage"
+              data-stage={s}
+              data-tracks={tracks}
+              data-fork={fork ? 'yes' : 'no'}
+              data-merge={merge ? 'yes' : 'no'}
+              data-head={s > 0 ? 'yes' : 'no'}
+            >
+              {/* pins once the set is fully in view; the rest of this stage's
+                  scroll drives only the lights while the text holds still */}
+              <div class="wl-pin">
+                {/* the line already drawn by earlier sets, carried up off the top
+                    of the screen so a pinned set never starts in mid-air */}
+                {s > 0 && <span class="wl-leadin" data-track="a" aria-hidden="true" />}
+                {s > 0 && tracks === 2 && !fork && <span class="wl-leadin" data-track="b" aria-hidden="true" />}
+                {/* Only the branching track needs artwork: the straight track's
+                    line through a junction is just its own rail carrying on, so
+                    it stays glued to its light by construction. */}
+                {fork && (
+                  <svg class="wl-junction wl-junction--fork" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                    <path d="M 0 0 L 0 10 L 100 86 L 100 100" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+                  </svg>
+                )}
+                <div class="wl-sets">
+                  {/* rails are trails: each grows only to where its own light reached */}
+                  <span class="wl-rail" data-track="a" aria-hidden="true" />
+                  <span class="wl-orb" data-track="a" aria-hidden="true" />
+                  {tracks === 2 && (
+                    <>
+                      <span class="wl-rail" data-track="b" aria-hidden="true" />
+                      <span class="wl-orb" data-track="b" aria-hidden="true" />
+                    </>
+                  )}
+                  {set.map((job) => (
+                    <div class="wl-set">
+                      <div class="wl-card">
+                        <div class="font-mono text-xs leading-relaxed">
+                          <span class="stamp">
+                            {job.start} — {job.end}
+                          </span>
+                          <p class="mt-2.5 text-faint">{job.location}</p>
+                        </div>
+                        <h3 class="font-display mt-5 text-lg font-semibold md:text-[1.3rem]">{job.role}</h3>
+                        <p class="mt-1 font-mono text-[0.8125rem] text-muted">{job.org}</p>
+                        <ul class="wl-bullets mt-5 space-y-2.5">
+                          {job.bullets.map((bullet) => (
+                            <li class="content-emphasis flex gap-3 text-[0.9375rem] leading-relaxed text-muted">
+                              <span class="mt-[0.7em] h-px w-3.5 shrink-0 bg-accent-bright" aria-hidden="true" />
+                              <span set:html={emphasize(bullet)} />
+                            </li>
+                          ))}
+                        </ul>
+                        {job.tech.length > 0 && <p class="mt-4 font-mono text-xs leading-relaxed text-faint">{job.tech.join(' · ')}</p>}
+                      </div>
+                    </div>
                   ))}
-                </ul>
-                {job.tech.length > 0 && <p class="mt-4 font-mono text-xs leading-relaxed text-faint">{job.tech.join(' · ')}</p>}
+                </div>
+                {merge && (
+                  <svg class="wl-junction wl-junction--merge" viewBox="0 0 100 100" preserveAspectRatio="none" fill="none" aria-hidden="true">
+                    <path d="M 100 0 L 100 14 L 0 90 L 0 100" stroke="currentColor" stroke-width="1" vector-effect="non-scaling-stroke" />
+                  </svg>
+                )}
               </div>
             </li>
           );
         })
       }
     </ol>
-
-    <span class="wl-orb wl-orb--lead" aria-hidden="true"></span>
-    <span class="wl-orb wl-orb--left" aria-hidden="true"></span>
-    <span class="wl-orb wl-orb--right" aria-hidden="true"></span>
   </div>
 </Section>
 
 <script>
-  // Scroll-driven world lines. Each light tracks the reading line down its own
-  // world line, and the rails are trails grown to wherever each light has
-  // reached — so a set's line (and text) only exists once a light descends to
-  // it. The right light follows an offset-path (the jogged route), so it
-  // traverses the actual world line instead of cutting straight across.
+  // Scroll-PINNED world lines. Each set sticks once it is fully in view: the
+  // text then holds still while that stage's remaining scroll drives only the
+  // lights. In a two-line set the left light draws its whole line top to bottom
+  // first, then the right light draws its own, and each bullet's connector
+  // reaches out the moment its light passes that bullet.
+  //
+  // Every line is glued to its light by construction:
+  //   · a straight run is a rail whose height ends exactly at its own light;
+  //   · a junction's branching path descends monotonically, so clipping it at
+  //     that branch's light y reveals the path exactly up to the light.
+  // Both junctions therefore track their light rather than a separate timeline.
   const wl = document.querySelector<HTMLElement>('.wl');
-  const entries = wl ? [...wl.querySelectorAll<HTMLElement>('.wl-entry')] : [];
-  const cards = entries.map((e) => e.querySelector<HTMLElement>('.wl-card')!);
+  const stageEls = wl ? [...wl.querySelectorAll<HTMLElement>('.wl-stage')] : [];
 
-  if (wl && cards.length > 0) {
-    const orbLead = wl.querySelector<HTMLElement>('.wl-orb--lead')!;
-    const orbLeft = wl.querySelector<HTMLElement>('.wl-orb--left')!;
-    const orbRight = wl.querySelector<HTMLElement>('.wl-orb--right')!;
-    const railRight = wl.querySelector<HTMLElement>('.wl-rail--right');
+  if (wl && stageEls.length > 0) {
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const forked = cards.length > 1;
-    const stageOf = (i: number) => (i === 0 ? 0 : Math.floor((i - 1) / 2) + 1);
+    const W_ENTRY = 0.11; // share of a stage's scroll spent arriving from the set above
+    const W_MERGE = 0.15; // …and converging at the end
+    const HEAD_MIN = 64; // gap between one set and the next, at minimum
+    const HEAD_MAX = 176;
+    const BOTTOM = 28; // breathing room under a pinned set
 
-    const FORK_H = 80;
-    const GAP = 30; // room under a card before its junction
-    const READ = 0.42; // reading line, fraction of viewport height
+    const clamp = (n: number, lo: number, hi: number) => (n < lo ? lo : n > hi ? hi : n);
+    const clamp01 = (n: number) => clamp(n, 0, 1);
+    const pt = (x: number, y: number) => ({ x, y });
 
-    // Geometry in .wl-local pixels, remeasured on resize/load.
-    let g = {
-      top: 0, // document Y of .wl top
-      leadStart: 0,
-      forkY: 0,
-      branchTop: 0,
-      mergeTop: 0,
-      mergeY: 0,
-      rightX: 0,
-      rightPath: [] as { x: number; y: number; len: number }[], // cumulative-length vertices
-      rightLen: 0,
-    };
-
-    function measure() {
-      g.top = wl!.getBoundingClientRect().top + window.scrollY;
-      g.rightX = railRight ? railRight.offsetLeft : 0;
-      const lead = cards[0]!;
-      g.leadStart = lead.offsetTop + Math.min(46, lead.offsetHeight * 0.16);
-      g.forkY = lead.offsetTop + lead.offsetHeight + GAP;
-      g.branchTop = g.forkY + FORK_H;
-      let bottom = g.branchTop;
-      for (let i = 1; i < cards.length; i++) bottom = Math.max(bottom, cards[i]!.offsetTop + cards[i]!.offsetHeight);
-      g.mergeTop = bottom + GAP;
-      g.mergeY = g.mergeTop + FORK_H;
-
-      wl!.style.setProperty('--wl-fork-y', `${g.forkY}px`);
-      wl!.style.setProperty('--wl-fork-h', `${FORK_H}px`);
-      wl!.style.setProperty('--wl-left-top', `${g.forkY}px`); // left line continues straight from the fork
-      wl!.style.setProperty('--wl-branch-top', `${g.branchTop}px`);
-      wl!.style.setProperty('--wl-merge-top', `${g.mergeTop}px`);
-
-      // The right light's world line: down at x=0 to the fork, jog to the
-      // centre, down the right line, jog back to x=0 at the merge.
-      const rx = g.rightX;
-      const pts = [
-        { x: 0, y: g.forkY },
-        { x: 0, y: g.forkY + 0.2 * FORK_H },
-        { x: rx, y: g.forkY + 0.7 * FORK_H },
-        { x: rx, y: g.branchTop },
-        { x: rx, y: g.mergeTop },
-        { x: rx, y: g.mergeTop + 0.3 * FORK_H },
-        { x: 0, y: g.mergeTop + 0.8 * FORK_H },
-        { x: 0, y: g.mergeY },
-      ];
-      let len = 0;
-      g.rightPath = pts.map((p, i) => {
-        if (i > 0) len += Math.hypot(p.x - pts[i - 1]!.x, p.y - pts[i - 1]!.y);
-        return { x: p.x, y: p.y, len };
-      });
-      g.rightLen = len;
-      orbRight.style.offsetPath = `path("${pts.map((p, i) => `${i ? 'L' : 'M'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ')}")`;
+    // position along a polyline, parameterised 0..1 by cumulative length
+    function along(pts: { x: number; y: number }[], t: number) {
+      const seg: number[] = [];
+      let total = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const d = Math.hypot(pts[i]!.x - pts[i - 1]!.x, pts[i]!.y - pts[i - 1]!.y);
+        seg.push(d);
+        total += d;
+      }
+      let want = clamp01(t) * total;
+      for (let i = 0; i < seg.length; i++) {
+        if (want <= seg[i]! || i === seg.length - 1) {
+          const f = seg[i] ? Math.min(1, want / seg[i]!) : 1;
+          return pt(pts[i]!.x + (pts[i + 1]!.x - pts[i]!.x) * f, pts[i]!.y + (pts[i + 1]!.y - pts[i]!.y) * f);
+        }
+        want -= seg[i]!;
+      }
+      return pts[pts.length - 1]!;
     }
 
-    // offset-distance (%) for a point at world-line height y on the right path
-    function rightDistPct(y: number) {
-      const path = g.rightPath;
-      const yy = Math.max(path[0]!.y, Math.min(path[path.length - 1]!.y, y));
-      for (let i = 1; i < path.length; i++) {
-        const a = path[i - 1]!;
-        const b = path[i]!;
-        if (yy <= b.y || i === path.length - 1) {
-          const f = b.y === a.y ? 1 : (yy - a.y) / (b.y - a.y);
-          const d = a.len + f * (b.len - a.len);
-          return g.rightLen > 0 ? (d / g.rightLen) * 100 : 0;
+    type Track = { rail: HTMLElement; orb: HTMLElement; bullets: { el: HTMLElement; y: number }[] };
+    type Stage = {
+      el: HTMLElement;
+      pin: HTMLElement;
+      sets: HTMLElement;
+      fork: HTMLElement | null;
+      merge: HTMLElement | null;
+      leadins: HTMLElement[];
+      tracks: Track[];
+      head: number;
+      mergeH: number;
+      railFull: number;
+      rx: number;
+      s0: number;
+      s1: number;
+    };
+
+    const stages: Stage[] = stageEls.map((el) => {
+      const rails = [...el.querySelectorAll<HTMLElement>('.wl-rail')];
+      const orbs = [...el.querySelectorAll<HTMLElement>('.wl-orb')];
+      const cards = [...el.querySelectorAll<HTMLElement>('.wl-card')];
+      return {
+        el,
+        pin: el.querySelector<HTMLElement>('.wl-pin')!,
+        sets: el.querySelector<HTMLElement>('.wl-sets')!,
+        fork: el.querySelector<HTMLElement>('.wl-junction--fork'),
+        merge: el.querySelector<HTMLElement>('.wl-junction--merge'),
+        leadins: [...el.querySelectorAll<HTMLElement>('.wl-leadin')],
+        tracks: rails.map((rail, i) => ({
+          rail,
+          orb: orbs[i]!,
+          // a two-line set may hold only one role; the empty side has no bullets
+          bullets: [...(cards[i]?.querySelectorAll<HTMLElement>('.wl-bullets > li') ?? [])].map((b) => ({ el: b, y: 0 })),
+        })),
+        head: 0,
+        mergeH: 0,
+        railFull: 0,
+        rx: 0,
+        s0: 0,
+        s1: 0,
+      };
+    });
+
+    function measure() {
+      const vh = window.innerHeight;
+      // Pass 1 — size the gap above each set from the room actually left over,
+      // so consecutive sets are never crammed together yet a pinned set still
+      // fits on screen (which is what keeps the lights visible).
+      for (const st of stages) {
+        st.mergeH = st.merge ? parseFloat(getComputedStyle(st.el).getPropertyValue('--wl-merge-h')) || 96 : 0;
+        const pinTop = parseFloat(getComputedStyle(st.pin).top) || 0;
+        const content = st.sets.offsetHeight + st.mergeH;
+        st.head = st.el.dataset.head === 'yes' ? clamp(vh - pinTop - BOTTOM - content, HEAD_MIN, HEAD_MAX) : 0;
+        st.el.style.setProperty('--wl-head', `${st.head}px`);
+      }
+      // Pass 2 — positions, now that the heads have changed the pin heights
+      for (const st of stages) {
+        const top = st.el.getBoundingClientRect().top + window.scrollY;
+        const pinTop = parseFloat(getComputedStyle(st.pin).top) || 0;
+        st.s0 = top - pinTop;
+        st.s1 = top + st.el.offsetHeight - st.pin.offsetHeight - pinTop;
+        st.railFull = st.sets.offsetHeight;
+        st.rx = st.tracks[1] ? st.tracks[1]!.rail.offsetLeft : 0;
+        for (const tr of st.tracks) {
+          for (const b of tr.bullets) {
+            // where this bullet's connector meets the rail (::before sits at 0.72em)
+            b.y = b.el.offsetTop + 0.72 * parseFloat(getComputedStyle(b.el).fontSize);
+          }
         }
       }
-      return 100;
+    }
+
+    // A rail is drawn from `railTop` (above the cards) down to exactly its light.
+    function place(tr: Track, x: number, y: number, op: number, railTop: number, railEnd: number) {
+      tr.rail.style.height = `${Math.max(0, Math.min(y, railEnd) + railTop)}px`;
+      tr.orb.style.setProperty('--wl-ox', `${x}px`);
+      tr.orb.style.setProperty('--wl-oy', `${y}px`);
+      tr.orb.style.setProperty('--wl-oo', `${op}`);
+      for (const b of tr.bullets) b.el.dataset.on = y >= b.y ? '1' : '0';
+    }
+
+    function apply(st: Stage, p: number, own: boolean) {
+      const two = st.tracks.length > 1;
+      const head = st.head;
+      const MH = st.mergeH;
+      const wE = head > 0 ? W_ENTRY : 0;
+      const wM = st.merge ? W_MERGE : 0;
+      const travel = Math.max(0.2, 1 - wE - wM);
+      const wA = two ? travel / 2 : travel;
+      const wB = two ? travel / 2 : 0;
+
+      const pe = wE ? clamp01(p / wE) : 1;
+      const pa = clamp01((p - wE) / wA);
+      const pb = wB ? clamp01((p - wE - wA) / wB) : 0;
+      const pm = wM ? clamp01((p - wE - wA - wB) / wM) : 0;
+
+      // Carry the already-drawn line up to the top of the screen. The gap only
+      // opens once the pin is held back from its natural spot, and we never draw
+      // above the viewport — so this can never double up on the previous set.
+      const pinVp = st.pin.getBoundingClientRect().top;
+      const natVp = st.el.getBoundingClientRect().top;
+      const ext = Math.max(0, Math.min(pinVp - natVp, Math.max(0, pinVp)));
+      for (const li of st.leadins) li.style.height = `${ext}px`;
+
+      // Exactly one stage owns the lights at a time. A finished stage's end
+      // point and the next stage's start point are the same place on screen, so
+      // handing over there keeps one unbroken light instead of two dots or none.
+      const op = own ? 1 : 0;
+
+      // Track A runs straight the whole way — down through the gap, down its own
+      // rail, then on through the merge — so one rail covers all three.
+      const ay = pe < 1 ? -head * (1 - pe) : pa * st.railFull + pm * MH;
+      place(st.tracks[0]!, 0, ay, op, head, st.railFull + MH);
+
+      const B = st.tracks[1];
+      if (B) {
+        let bx = st.rx;
+        let by = pb * st.railFull;
+        if (pe < 1) {
+          // arriving: across the fork's diagonal, or straight down the gap
+          by = -head * (1 - pe);
+          if (st.fork) {
+            const q = along([pt(0, -head), pt(0, -head * 0.9), pt(st.rx, -head * 0.14), pt(st.rx, 0)], pe);
+            bx = q.x;
+            by = q.y;
+          }
+        } else if (pm > 0) {
+          const q = along([pt(st.rx, st.railFull), pt(st.rx, st.railFull + MH * 0.14), pt(0, st.railFull + MH * 0.9), pt(0, st.railFull + MH)], pm);
+          bx = q.x;
+          by = q.y;
+        }
+        // on a forked set track B is born at the fork, so its rail starts at the
+        // cards; otherwise it carries up through the gap like track A
+        place(B, bx, by, op, st.fork ? 0 : head, st.railFull);
+
+        // Clip each junction at its own branch light's y. The path only ever
+        // descends, so the revealed part ends exactly under the light.
+        if (st.fork) st.fork.style.setProperty('--wl-draw', `${clamp01((by + head) / Math.max(1, head)) * 100}%`);
+        if (st.merge) st.merge.style.setProperty('--wl-draw', `${clamp01((by - st.railFull) / Math.max(1, MH)) * 100}%`);
+      }
     }
 
     let raf = 0;
     function frame() {
       raf = 0;
-      // Below lg the fork is off; show every role plainly (single-column CSS).
-      if (window.innerWidth < 1024) {
-        entries.forEach((el) => (el.dataset.vis = 'active'));
-        return;
-      }
-      const reading = window.scrollY + window.innerHeight * READ - g.top;
-
-      // which single stage is in focus (used only for showing/hiding text)
-      let activeStage = 0;
-      for (let i = 1; i < cards.length; i++) {
-        if (i % 2 === 1 && cards[i]!.offsetTop - 40 <= reading) activeStage = stageOf(i);
-      }
-      entries.forEach((el) => {
-        el.dataset.vis = Number(el.dataset.stage) === activeStage ? 'active' : 'other';
+      if (window.innerWidth < 1024) return;
+      const y = window.scrollY;
+      // the light belongs to the first stage that has not finished yet
+      let owner = stages.findIndex((st) => y <= st.s1);
+      if (owner < 0) owner = stages.length - 1;
+      stages.forEach((st, i) => {
+        const p = clamp01((y - st.s0) / Math.max(1, st.s1 - st.s0));
+        apply(st, p, i === owner);
       });
-
-      // the single line runs top → fork; the lead light rides it to the fork
-      const leadY = Math.max(g.leadStart, Math.min(reading, g.forkY));
-      orbLead.style.setProperty('--wl-orb-lead-y', `${leadY}px`);
-      wl!.style.setProperty('--wl-lead-h', `${Math.min(reading, g.forkY)}px`);
-
-      const pair = forked && reading > g.forkY;
-      wl!.dataset.fork = pair ? 'on' : 'off';
-      wl!.dataset.merge = forked && reading > g.mergeTop - 4 ? 'on' : 'off';
-
-      // Both branch lights start at the fork point and track the reading line
-      // down their own world lines — the left straight down, the right jogging
-      // to the centre — so the staggered roles make them arrive one after the
-      // other. The rails are trails grown to wherever each light has reached.
-      const branchY = Math.max(g.forkY, Math.min(reading, g.mergeY));
-      orbLeft.style.setProperty('--wl-orb-left-y', `${branchY}px`);
-      orbRight.style.setProperty('--wl-right-dist', `${rightDistPct(branchY)}%`);
-      wl!.style.setProperty('--wl-left-h', `${Math.max(0, branchY - g.forkY)}px`);
-      wl!.style.setProperty('--wl-right-h', `${Math.max(0, branchY - g.branchTop)}px`);
-
-      // Hand-off: only one of {lead} / {left,right} is lit. The fade-in delay
-      // in CSS lets the outgoing light clear the fork before the pair appears.
-      orbLead.classList.toggle('is-on', !pair);
-      orbLeft.classList.toggle('is-on', pair);
-      orbRight.classList.toggle('is-on', pair);
     }
 
     const onScroll = () => {
       if (!raf) raf = requestAnimationFrame(frame);
     };
 
-    if (reduced || !forked) {
-      // Static, fully readable: every set shown, a plain single rail.
-      measure();
-      entries.forEach((el) => (el.dataset.vis = 'active'));
-      wl.style.setProperty('--wl-lead-h', `${g.mergeY || 9999}px`);
-      if (forked) {
-        wl.dataset.fork = 'on';
-        wl.style.setProperty('--wl-left-h', `${g.mergeY - g.forkY}px`);
-        wl.style.setProperty('--wl-right-h', `${g.mergeY - g.branchTop}px`);
+    function stat() {
+      // static, fully readable: every line drawn, every connector out, no lights
+      for (const st of stages) {
+        st.fork?.style.setProperty('--wl-draw', '100%');
+        st.merge?.style.setProperty('--wl-draw', '100%');
+        for (const li of st.leadins) li.style.height = '0px';
+        st.tracks.forEach((tr, i) => {
+          // mirror the live geometry: a rail spans its gap plus the cards, and
+          // track A carries on down through the merge
+          const railTop = i === 1 && st.fork ? 0 : st.head;
+          tr.rail.style.height = `${st.railFull + railTop + (i === 0 ? st.mergeH : 0)}px`;
+          tr.orb.style.setProperty('--wl-oo', '0');
+          for (const b of tr.bullets) b.el.dataset.on = '1';
+        });
       }
-    } else {
+    }
+
+    const refresh = () => {
       measure();
-      frame();
+      if (reduced || window.innerWidth < 1024) stat();
+      else frame();
+    };
+
+    if (reduced) {
+      measure();
+      stat();
+    } else {
+      refresh();
       window.addEventListener('scroll', onScroll, { passive: true });
-      window.addEventListener(
-        'resize',
-        () => {
-          measure();
-          frame();
-        },
-        { passive: true }
-      );
-      window.addEventListener('load', () => {
-        measure();
-        frame();
-      });
+      window.addEventListener('resize', refresh, { passive: true });
+      window.addEventListener('load', refresh);
     }
   }
 </script>

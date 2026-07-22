@@ -485,56 +485,105 @@ html[data-scene='contact'] #backdrop .scene-contact {
   }
 }
 
-/* ── Experience: scroll-driven world-line divergence ─────────────────────────
-   The lights track the reading line down the section, each on its own world
-   line, and the rails are TRAILS the lights draw behind them — so a set's
-   line (and its text) only exists once a light has descended to it.
+/* ── Experience: scroll-pinned world lines ───────────────────────────────────
+   Each experience set is a stage that PINS once it is fully in view. The text
+   then holds still and that stage's remaining scroll drives only the lights:
+   in a paired set the left light draws its whole line top to bottom first, then
+   the right light draws its own, and only once both have landed does the page
+   move on to the next set.
 
-   The most recent role sits alone on a single line. Below it the line forks
-   asymmetrically — one continues down the far left, the other branches to
-   the centre — so every card sits to the RIGHT of its line and all body text
-   stays left-aligned. The remaining roles pair up across the two lines.
+   Rails are TRAILS — a line exists only where its own light has already been —
+   and each bullet's connector reaches out from the rail the moment its light
+   passes that bullet. The fork and merge are clipped to a draw fraction the
+   script advances as the lights travel them, so a junction can never appear as
+   a stray segment before the lights get there.
 
-   The right light follows an offset-path (the jogged world line) so it
-   traverses the actual route rather than cutting straight across; the left
-   and lead lights are vertical, positioned with translateY. Geometry that
-   depends on content height is measured by the component script and fed in
-   as custom properties (all in .wl-local pixels).
+   Geometry that depends on content height is measured by the component script;
+   coordinates are local to .wl-sets (y=0 is the top of the cards, x=0 the left
+   rail).
    ─────────────────────────────────────────────────────────────────────────── */
 
 .wl {
   --wl-col-gap: 3rem;
   --wl-run: 3.25rem; /* horizontal length of a bullet's mini world line */
+  /* Gap above a set's cards, holding the fork (or just the incoming lines) —
+     it is what keeps one set from crowding the next. The script sizes it per
+     stage from the room actually left over, so a pinned set still fits on
+     screen and the lights never travel off the bottom. */
+  --wl-head: 0px;
+  --wl-merge-h: 96px; /* the converging tail below the final set */
+  --wl-pin-top: 4.5rem; /* where a set settles once it pins (clears the header) */
   --wl-right-x: calc(50% + var(--wl-col-gap) / 2);
   position: relative;
 }
 
+/* ── stages: the scroll budget a pinned set consumes ─────────────────────── */
+
 .wl-list {
+  display: block;
+}
+.wl-stage {
+  position: relative;
+}
+/* height beyond the pinned content is the scroll the lights consume */
+.js .wl-stage[data-tracks='1'] {
+  min-height: 132vh;
+}
+.js .wl-stage[data-tracks='2'] {
+  min-height: 210vh;
+}
+.wl-pin {
+  position: relative;
+}
+.js .wl-pin {
+  position: sticky;
+  top: var(--wl-pin-top);
+}
+/* room above the cards (the gap between sets) and below them (the merge) */
+.wl-stage[data-head='yes'] .wl-pin {
+  padding-top: var(--wl-head);
+}
+.wl-stage[data-merge='yes'] .wl-pin {
+  padding-bottom: var(--wl-merge-h);
+}
+
+.wl-sets {
+  position: relative; /* the coordinate space for rails, lights and bullets */
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr;
   column-gap: var(--wl-col-gap);
-  /* rows sized so one set fills the view at a time (the layout "zoom") */
-  grid-template-rows: minmax(74vh, auto);
-  grid-auto-rows: minmax(86vh, auto);
 }
-.wl-entry--lead {
-  grid-column: 1 / -1;
+/* every set after the lead runs two lines, even one holding a single role —
+   the empty column is where a future role lands */
+.wl-stage[data-tracks='2'] .wl-sets {
+  grid-template-columns: 1fr 1fr;
 }
-.wl-entry--left {
-  grid-column: 1;
-}
-.wl-entry--right {
-  grid-column: 2;
+.wl-card {
+  padding-left: var(--wl-run); /* the gutter the connectors run through */
 }
 
-/* ── rails ───────────────────────────────────────────────────────────────── */
+/* ── rails: each grows only to where its own light has reached ───────────── */
 
+/* A rail starts above the cards (in the gap) and is drawn down to exactly its
+   own light, so line and light can never drift apart. */
 .wl-rail {
   position: absolute;
+  top: calc(-1 * var(--wl-head, 0px));
   width: 1px;
+  height: 0;
   background-image: repeating-linear-gradient(to bottom, var(--line-strong) 0 7px, transparent 7px 10px);
   background-size: 1px 10px;
   pointer-events: none;
+}
+/* on a forked set the right line is born at the fork, not carried in from above */
+.wl-stage[data-fork='yes'] .wl-rail[data-track='b'] {
+  top: 0;
+}
+.wl-rail[data-track='a'] {
+  left: 0;
+}
+.wl-rail[data-track='b'] {
+  left: var(--wl-right-x);
 }
 .js .wl-rail {
   animation: wl-rail-flow 1.8s linear infinite;
@@ -544,80 +593,59 @@ html[data-scene='contact'] #backdrop .scene-contact {
     background-position: 0 10px;
   }
 }
-/* the single line, top of the section down to the intersection — and no
-   further; nothing continues past the fork */
-.wl-rail--lead {
+
+/* The line earlier sets already drew, carried from this pin's top up to the top
+   of the screen. Its height is 0 until the pin is actually held back, so it can
+   never double up on the previous set's line during the hand-over. */
+.wl-leadin {
+  position: absolute;
+  bottom: 100%;
+  width: 1px;
+  height: 0;
+  background-image: repeating-linear-gradient(to bottom, var(--line-strong) 0 7px, transparent 7px 10px);
+  background-size: 1px 10px;
+  pointer-events: none;
+}
+.wl-leadin[data-track='a'] {
   left: 0;
-  top: 0;
-  height: var(--wl-lead-h, 0px);
 }
-/* the branches: trails grown to wherever their light has reached */
-.wl-rail--right {
-  top: var(--wl-branch-top, 0px);
-}
-.wl-rail--left {
-  left: 0;
-  top: var(--wl-left-top, 0px);
-  height: var(--wl-left-h, 0px);
-}
-.wl-rail--right {
+.wl-leadin[data-track='b'] {
   left: var(--wl-right-x);
-  height: var(--wl-right-h, 0px);
+}
+.js .wl-leadin {
+  animation: wl-rail-flow 1.8s linear infinite;
 }
 
-/* ── fork and merge junctions ────────────────────────────────────────────── */
+/* ── fork and merge: only the BRANCHING line needs artwork (the straight line
+   through a junction is just that track's rail carrying on). Each is clipped at
+   its own branch light's y — the path only descends, so the revealed part ends
+   exactly under the light and the two can never drift apart. ─────────────── */
 
-.wl-fork,
-.wl-merge {
+.wl-junction {
   position: absolute;
   left: 0;
   width: var(--wl-right-x);
-  height: var(--wl-fork-h, 80px);
   overflow: visible;
   color: var(--line-strong);
-  opacity: 0;
-  transition: opacity 0.45s ease-out;
+  /* --wl-draw is advanced by the script; 0% = nothing drawn yet */
+  clip-path: inset(0 0 calc(100% - var(--wl-draw, 0%)) 0);
 }
-.wl-fork {
-  top: var(--wl-fork-y, 0px);
+.wl-junction--fork {
+  top: 0;
+  height: var(--wl-head);
 }
-.wl-merge {
-  top: var(--wl-merge-top, 0px);
+.wl-junction--merge {
+  bottom: 0;
+  height: var(--wl-merge-h);
 }
-.wl[data-fork='on'] .wl-fork {
-  opacity: 1;
-}
-.wl[data-merge='on'] .wl-merge {
-  opacity: 1;
-}
-.wl-fork path,
-.wl-merge path {
+.wl-junction path {
   stroke-dasharray: 7 3;
 }
-.js .wl-fork path,
-.js .wl-merge path {
+.js .wl-junction path {
   animation: wl-flow 1.8s linear infinite;
 }
 
-/* ── cards and staging (uniform text; only the graphics change with state) ─ */
-
-.wl-card {
-  position: relative;
-  padding-left: var(--wl-run);
-  transition: opacity 0.5s ease-out;
-}
-.wl-entry--right .wl-card {
-  margin-top: 7rem; /* stagger, so the pair reads one-then-the-other */
-}
-/* one set in focus at a time — shown/hidden by opacity only, never resized */
-.wl-entry[data-vis='other'] .wl-card {
-  opacity: 0;
-}
-.wl-entry[data-vis='active'] .wl-card {
-  opacity: 1;
-}
-
-/* ── mini world lines: a horizontal branch off the role's line to each dash ─ */
+/* ── mini world lines: one per bullet, out when its own light passes it ──── */
 
 .wl-bullets > li {
   position: relative;
@@ -631,8 +659,6 @@ html[data-scene='contact'] #backdrop .scene-contact {
   height: 1px;
   background-image: repeating-linear-gradient(to right, var(--line-strong) 0 5px, transparent 5px 8px);
   background-size: 8px 1px;
-  opacity: 0.5;
-  transition: opacity 0.4s ease-out;
 }
 .wl-bullets > li::after {
   content: '';
@@ -643,15 +669,26 @@ html[data-scene='contact'] #backdrop .scene-contact {
   height: 4px;
   border-radius: 9999px;
   background: var(--line-strong);
-  opacity: 0.6;
-  transition: opacity 0.4s ease-out;
 }
-.wl-entry[data-vis='active'] .wl-bullets > li::before,
-.wl-entry[data-vis='active'] .wl-bullets > li::after {
-  opacity: 1;
+.js .wl-bullets > li::before {
+  transform: scaleX(0);
+  transform-origin: left center; /* reach out from the world line */
+  transition: transform 0.4s cubic-bezier(0.22, 0.61, 0.36, 1);
 }
-.js .wl-entry[data-vis='active'] .wl-bullets > li::before {
+.js .wl-bullets > li::after {
+  opacity: 0;
+  transform: scale(0.3);
+  transition:
+    opacity 0.26s ease-out,
+    transform 0.26s ease-out;
+}
+.js .wl-bullets > li[data-on='1']::before {
+  transform: scaleX(1);
   animation: wl-branch-flow 1.4s linear infinite;
+}
+.js .wl-bullets > li[data-on='1']::after {
+  opacity: 1;
+  transform: scale(1);
 }
 @keyframes wl-branch-flow {
   to {
@@ -667,78 +704,66 @@ html[data-scene='contact'] #backdrop .scene-contact {
   left: 0;
   width: 0.6875rem;
   height: 0.6875rem;
+  margin: -0.34375rem 0 0 -0.34375rem;
   border-radius: 9999px;
   background: var(--accent-bright);
-  box-shadow: 0 0 0 4px var(--glow), 0 0 14px var(--glow);
-  opacity: 0;
+  box-shadow:
+    0 0 0 4px var(--glow),
+    0 0 14px var(--glow);
+  /* both position and fade follow scroll directly — no transition to chase */
+  transform: translate(var(--wl-ox, 0px), var(--wl-oy, 0px));
+  opacity: var(--wl-oo, 0);
   pointer-events: none;
-  /* only the fade is animated; position follows scroll directly. The fade-in
-     is delayed a beat so the outgoing light clears the fork first. */
-  transition: opacity 0.28s ease-out 0.16s;
-}
-.wl-orb.is-on {
-  opacity: 1;
-}
-.wl-orb--lead {
-  margin: -0.34375rem 0 0 -0.34375rem;
-  transform: translateY(var(--wl-orb-lead-y, 0px));
-}
-.wl-orb--left {
-  margin: -0.34375rem 0 0 -0.34375rem;
-  transform: translateY(var(--wl-orb-left-y, 0px));
-}
-/* the right light rides its world line (jog at the fork, jog back at merge) */
-.wl-orb--right {
-  offset-path: var(--wl-right-path, none);
-  offset-distance: var(--wl-right-dist, 0%);
-  offset-rotate: 0deg;
-  offset-anchor: 50% 50%;
 }
 
-/* ── no JS: a plain single readable rail, every role visible ─────────────── */
+/* ── no JS: a plain readable column, every line and connector drawn ──────── */
 
-html:not(.js) .wl-rail--lead {
+html:not(.js) .wl-rail[data-track='a'] {
   height: 100%;
 }
-html:not(.js) .wl-rail--left,
-html:not(.js) .wl-rail--right,
-html:not(.js) .wl-fork,
-html:not(.js) .wl-merge,
+html:not(.js) .wl-rail[data-track='b'],
+html:not(.js) .wl-leadin,
+html:not(.js) .wl-junction,
 html:not(.js) .wl-orb {
   display: none;
 }
 
-/* ── small screens: one column, one rail, no fork ────────────────────────── */
+/* ── small screens: one column, one rail, no pin, no junctions ───────────── */
 
 @media (max-width: 1023px) {
   .wl {
     --wl-run: 1.75rem;
   }
-  .wl-list {
+  .js .wl-stage[data-tracks='1'],
+  .js .wl-stage[data-tracks='2'] {
+    min-height: 0;
+  }
+  .js .wl-pin {
+    position: relative;
+    top: auto;
+  }
+  .wl-stage[data-head='yes'] .wl-pin,
+  .wl-stage[data-merge='yes'] .wl-pin {
+    padding-top: 0;
+    padding-bottom: 0;
+  }
+  .wl-rail {
+    top: 0;
+  }
+  .wl-stage[data-tracks='2'] .wl-sets {
     grid-template-columns: 1fr;
-    grid-template-rows: none;
-    grid-auto-rows: auto;
   }
-  .wl-entry--lead,
-  .wl-entry--left,
-  .wl-entry--right {
-    grid-column: 1;
+  .wl-sets {
+    row-gap: 3.5rem;
   }
-  .wl-entry--right .wl-card {
-    margin-top: 0;
+  .wl-rail[data-track='a'] {
+    height: 100% !important;
   }
-  .wl-entry .wl-card {
-    opacity: 1;
-  }
-  .wl-rail--left,
-  .wl-rail--right,
-  .wl-fork,
-  .wl-merge,
+  .wl-rail[data-track='b'],
+  .wl-leadin,
+  .wl-junction,
   .wl-orb {
     display: none;
-  }
-  .wl-rail--lead {
-    height: 100%;
   }
 }
 
@@ -831,18 +856,25 @@ html:not(.js) .wl-orb {
     transition: none;
   }
   .wl-card,
-  .wl-fork,
-  .wl-merge,
+  .wl-junction,
   .wl-orb,
   .wl-bullets > li::before,
   .wl-bullets > li::after {
     transition: none;
   }
   .js .wl-rail,
-  .js .wl-fork path,
-  .js .wl-merge path,
-  .js .wl-entry[data-vis='active'] .wl-bullets > li::before {
+  .js .wl-junction path,
+  .js .wl-bullets > li[data-on='1']::before {
     animation: none;
+  }
+  /* no pinning: every set reads as a plain stacked column */
+  .js .wl-stage[data-tracks='1'],
+  .js .wl-stage[data-tracks='2'] {
+    min-height: 0;
+  }
+  .js .wl-pin {
+    position: relative;
+    top: auto;
   }
   .cursor-blink,
   .js #wl-flash.wl-flash-run,
