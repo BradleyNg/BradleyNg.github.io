@@ -485,28 +485,27 @@ html[data-scene='contact'] #backdrop .scene-contact {
   }
 }
 
-/* ── Experience: staged world-line divergence ────────────────────────────────
-   Stage 0 is a single role on one line, wide and filling the middle of the
-   screen. Below it the line forks asymmetrically — one path continues down
-   the left edge, the other branches to the centre — and the remaining roles
-   pair up across the two lines, the right one staggered lower so the two
-   lights still arrive one at a time. Rows are sized to fill the viewport so
-   one set reads at a time; stages ahead of the reader stay hidden until
-   their lines have been drawn.
+/* ── Experience: scroll-driven world-line divergence ─────────────────────────
+   The lights track the reading line down the section, each on its own world
+   line, and the rails are TRAILS the lights draw behind them — so a set's
+   line (and its text) only exists once a light has descended to it.
 
-   The fork is asymmetric on purpose: it puts every card to the RIGHT of its
-   own line, which keeps all body text left-aligned. Running both lines down
-   the middle would force the left column into mirrored right-aligned text.
+   The most recent role sits alone on a single line. Below it the line forks
+   asymmetrically — one continues down the far left, the other branches to
+   the centre — so every card sits to the RIGHT of its line and all body text
+   stays left-aligned. The remaining roles pair up across the two lines.
 
-   Positions that depend on content height (--wl-fork-y, --wl-branch-top,
-   --wl-branch-h, --wl-merge-top) are measured once by the component script.
+   The right light follows an offset-path (the jogged world line) so it
+   traverses the actual route rather than cutting straight across; the left
+   and lead lights are vertical, positioned with translateY. Geometry that
+   depends on content height is measured by the component script and fed in
+   as custom properties (all in .wl-local pixels).
    ─────────────────────────────────────────────────────────────────────────── */
 
 .wl {
-  --wl-col-gap: 3rem; /* gutter between the two columns */
-  --wl-run: 3.5rem; /* line → card text: the bullet branch run */
-  --wl-right-x: calc(50% + var(--wl-col-gap) / 2); /* x of the branched line */
-  --wl-fork-h: 5rem;
+  --wl-col-gap: 3rem;
+  --wl-run: 3.25rem; /* horizontal length of a bullet's mini world line */
+  --wl-right-x: calc(50% + var(--wl-col-gap) / 2);
   position: relative;
 }
 
@@ -514,8 +513,9 @@ html[data-scene='contact'] #backdrop .scene-contact {
   display: grid;
   grid-template-columns: 1fr 1fr;
   column-gap: var(--wl-col-gap);
-  grid-template-rows: minmax(78vh, auto);
-  grid-auto-rows: minmax(88vh, auto);
+  /* rows sized so one set fills the view at a time (the layout "zoom") */
+  grid-template-rows: minmax(74vh, auto);
+  grid-auto-rows: minmax(86vh, auto);
 }
 .wl-entry--lead {
   grid-column: 1 / -1;
@@ -544,48 +544,39 @@ html[data-scene='contact'] #backdrop .scene-contact {
     background-position: 0 10px;
   }
 }
-
-/* the single line runs from the top of the section to the split — and stops
-   there. Nothing continues past the intersection while converged. */
+/* the single line, top of the section down to the intersection — and no
+   further; nothing continues past the fork */
 .wl-rail--lead {
   left: 0;
   top: 0;
-  height: var(--wl-fork-y, 100%);
+  height: var(--wl-lead-h, 0px);
 }
-/* the branches grow downward out of the fork as they are created */
-.wl-rail--left,
+/* the branches: trails grown to wherever their light has reached */
 .wl-rail--right {
   top: var(--wl-branch-top, 0px);
-  height: var(--wl-branch-h, 0px);
-  transform-origin: 50% 0;
-  transform: scaleY(var(--wl-branch-scale, 1));
-  transition:
-    transform 0.6s ease-out,
-    opacity 0.4s ease-out;
 }
 .wl-rail--left {
   left: 0;
+  top: var(--wl-left-top, 0px);
+  height: var(--wl-left-h, 0px);
 }
 .wl-rail--right {
   left: var(--wl-right-x);
-}
-.wl[data-wl='converged'] .wl-rail--left,
-.wl[data-wl='converged'] .wl-rail--right {
-  --wl-branch-scale: 0;
-  opacity: 0;
+  height: var(--wl-right-h, 0px);
 }
 
-/* ── fork and merge ──────────────────────────────────────────────────────── */
+/* ── fork and merge junctions ────────────────────────────────────────────── */
 
 .wl-fork,
 .wl-merge {
   position: absolute;
   left: 0;
   width: var(--wl-right-x);
-  height: var(--wl-fork-h);
+  height: var(--wl-fork-h, 80px);
   overflow: visible;
   color: var(--line-strong);
-  transition: opacity 0.5s ease-out;
+  opacity: 0;
+  transition: opacity 0.45s ease-out;
 }
 .wl-fork {
   top: var(--wl-fork-y, 0px);
@@ -593,9 +584,11 @@ html[data-scene='contact'] #backdrop .scene-contact {
 .wl-merge {
   top: var(--wl-merge-top, 0px);
 }
-.wl[data-wl='converged'] .wl-fork,
-.wl[data-wl='converged'] .wl-merge {
-  opacity: 0;
+.wl[data-fork='on'] .wl-fork {
+  opacity: 1;
+}
+.wl[data-merge='on'] .wl-merge {
+  opacity: 1;
 }
 .wl-fork path,
 .wl-merge path {
@@ -606,36 +599,25 @@ html[data-scene='contact'] #backdrop .scene-contact {
   animation: wl-flow 1.8s linear infinite;
 }
 
-/* ── cards and staging ───────────────────────────────────────────────────── */
+/* ── cards and staging (uniform text; only the graphics change with state) ─ */
 
 .wl-card {
   position: relative;
   padding-left: var(--wl-run);
-  transition:
-    opacity 0.6s ease-out,
-    transform 0.6s ease-out;
+  transition: opacity 0.5s ease-out;
 }
-.wl-entry--lead .wl-card {
-  max-width: 52rem;
-}
-/* the right-hand role sits lower, so the pair reads one-then-the-other and
-   the lights keep leapfrogging even though both are on screen */
 .wl-entry--right .wl-card {
-  margin-top: 7rem;
+  margin-top: 7rem; /* stagger, so the pair reads one-then-the-other */
 }
-
-/* one set in focus at a time; no data-vis (no JS) leaves everything visible */
-.wl-entry[data-vis='ahead'] .wl-card {
+/* one set in focus at a time — shown/hidden by opacity only, never resized */
+.wl-entry[data-vis='other'] .wl-card {
   opacity: 0;
-  transform: translateY(1.5rem);
 }
-.wl-entry[data-vis='past'] .wl-card {
-  opacity: 0.45;
-  transform: scale(0.97);
-  transform-origin: left top;
+.wl-entry[data-vis='active'] .wl-card {
+  opacity: 1;
 }
 
-/* ── mini world lines out to each achievement ────────────────────────────── */
+/* ── mini world lines: a horizontal branch off the role's line to each dash ─ */
 
 .wl-bullets > li {
   position: relative;
@@ -652,7 +634,6 @@ html[data-scene='contact'] #backdrop .scene-contact {
   opacity: 0.5;
   transition: opacity 0.4s ease-out;
 }
-/* the node where the branch leaves the world line */
 .wl-bullets > li::after {
   content: '';
   position: absolute;
@@ -686,41 +667,52 @@ html[data-scene='contact'] #backdrop .scene-contact {
   left: 0;
   width: 0.6875rem;
   height: 0.6875rem;
-  margin: -0.34375rem 0 0 -0.34375rem;
   border-radius: 9999px;
-  background: var(--wl-orb);
-  box-shadow: 0 0 0 3px var(--wl-glow);
-  opacity: 0;
-  pointer-events: none;
-  transition:
-    transform 0.55s ease-out,
-    opacity 0.3s ease-out,
-    background-color 0.4s ease-out,
-    box-shadow 0.4s ease-out;
-}
-.wl-orb--lead {
-  transform: translate(0, var(--wl-orb-lead-y, 0px));
-}
-.wl-orb--left {
-  transform: translate(0, var(--wl-orb-left-y, 0px));
-}
-.wl-orb--right {
-  transform: translate(var(--wl-orb-right-x, 0px), var(--wl-orb-right-y, 0px));
-}
-.wl-orb.is-on {
-  opacity: 0.55;
-}
-.wl-orb.is-current {
-  opacity: 1;
   background: var(--accent-bright);
   box-shadow: 0 0 0 4px var(--glow), 0 0 14px var(--glow);
+  opacity: 0;
+  pointer-events: none;
+  /* only the fade is animated; position follows scroll directly. The fade-in
+     is delayed a beat so the outgoing light clears the fork first. */
+  transition: opacity 0.28s ease-out 0.16s;
+}
+.wl-orb.is-on {
+  opacity: 1;
+}
+.wl-orb--lead {
+  margin: -0.34375rem 0 0 -0.34375rem;
+  transform: translateY(var(--wl-orb-lead-y, 0px));
+}
+.wl-orb--left {
+  margin: -0.34375rem 0 0 -0.34375rem;
+  transform: translateY(var(--wl-orb-left-y, 0px));
+}
+/* the right light rides its world line (jog at the fork, jog back at merge) */
+.wl-orb--right {
+  offset-path: var(--wl-right-path, none);
+  offset-distance: var(--wl-right-dist, 0%);
+  offset-rotate: 0deg;
+  offset-anchor: 50% 50%;
 }
 
-/* ── small screens: one column, one rail, no staging ─────────────────────── */
+/* ── no JS: a plain single readable rail, every role visible ─────────────── */
+
+html:not(.js) .wl-rail--lead {
+  height: 100%;
+}
+html:not(.js) .wl-rail--left,
+html:not(.js) .wl-rail--right,
+html:not(.js) .wl-fork,
+html:not(.js) .wl-merge,
+html:not(.js) .wl-orb {
+  display: none;
+}
+
+/* ── small screens: one column, one rail, no fork ────────────────────────── */
 
 @media (max-width: 1023px) {
   .wl {
-    --wl-run: 2rem;
+    --wl-run: 1.75rem;
   }
   .wl-list {
     grid-template-columns: 1fr;
@@ -735,24 +727,18 @@ html[data-scene='contact'] #backdrop .scene-contact {
   .wl-entry--right .wl-card {
     margin-top: 0;
   }
-  .wl-entry--lead .wl-card {
-    max-width: none;
+  .wl-entry .wl-card {
+    opacity: 1;
   }
-  .wl-rail--lead,
+  .wl-rail--left,
   .wl-rail--right,
   .wl-fork,
-  .wl-merge {
+  .wl-merge,
+  .wl-orb {
     display: none;
   }
-  .wl-rail--left {
-    top: 0;
+  .wl-rail--lead {
     height: 100%;
-    --wl-branch-scale: 1;
-    opacity: 1;
-  }
-  .wl-card {
-    opacity: 1;
-    transform: none;
   }
 }
 
@@ -845,9 +831,6 @@ html[data-scene='contact'] #backdrop .scene-contact {
     transition: none;
   }
   .wl-card,
-  .js .wl-card[data-reveal],
-  .wl-rail--left,
-  .wl-rail--right,
   .wl-fork,
   .wl-merge,
   .wl-orb,
