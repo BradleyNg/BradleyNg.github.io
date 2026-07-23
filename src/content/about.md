@@ -6,7 +6,7 @@
 # Optional headshot: drop a file in public/images/ and set e.g.
 #   photo: "/images/portrait.jpg"
 # It appears inside the profile card. Leave photo as "" for the placeholder.
-photo: ""
+photo: "/images/projects/IMG_6420.jpg"
 photoAlt: "Bradley Nguyen"
 ---
 
