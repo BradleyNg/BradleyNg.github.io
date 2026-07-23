@@ -452,11 +452,19 @@ html[data-scene='contact'] #backdrop .scene-contact {
   transform-box: fill-box;
   transform-origin: center;
 }
+/* Meshing wheels set --gear-period from their tooth count so their teeth pass
+   the contact point at one rate; loose decorative wheels keep the defaults. */
 .gear-spin {
-  animation: gear-rot 90s linear infinite;
+  animation: gear-rot var(--gear-period, 90s) linear infinite;
 }
 .gear-spin-reverse {
-  animation: gear-rot 64s linear infinite reverse;
+  animation: gear-rot var(--gear-period, 64s) linear infinite reverse;
+}
+/* Clock hands pivot on the dial centre, so they take an explicit origin in
+   viewBox units rather than their own bounding box. */
+.clock-hand {
+  transform-box: view-box;
+  animation: gear-rot var(--clock-period, 120s) linear infinite;
 }
 @keyframes gear-rot {
   to {
@@ -881,7 +889,8 @@ html:not(.js) .wl-orb {
   .js #wl-flash.wl-flash-run::before,
   .js #wl-flash.wl-flash-run::after,
   .gear-spin,
-  .gear-spin-reverse {
+  .gear-spin-reverse,
+  .clock-hand {
     animation: none;
   }
   .osc-trace {

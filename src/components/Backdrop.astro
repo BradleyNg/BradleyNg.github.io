@@ -52,8 +52,55 @@ const contactStalks: Stalk[] = [
   { x: 1390, top: 300, r: 6 },
 ];
 
-const bigGear = fineGear(44, 152, 140, 20);
-const midGear = fineGear(26, 82, 72, 12, 4, 42, 7);
+// ── the hero clockwork: two wheels that actually mesh ──────────────────────
+// Two wheels mesh only when (1) they share a MODULE — the same tooth spacing
+// per unit radius, module = 2·pitchRadius / teeth — so teeth line up; (2) their
+// pitch circles are tangent, i.e. centres sit pitchA+pitchB apart; and (3) they
+// turn at rates inversely proportional to their teeth, counter-rotating. With
+// all three, the pitch-line speeds match and a tooth seated in a gap stays
+// seated forever, so we only phase them once.
+const BIG_TEETH = 44;
+const BIG_PITCH = 146; // mean of tip 152 and root 140
+const MODULE = (2 * BIG_PITCH) / BIG_TEETH; // ≈ 6.64 — the shared tooth spacing
+const ADD = 6; // addendum/dedendum, matching the big wheel's 152/140 about 146
+
+const MID_TEETH = 23; // the largest count that keeps the mid wheel ~its old size
+const MID_PITCH = (MODULE * MID_TEETH) / 2; // ≈ 76.3, so the modules match exactly
+
+const bigGear = fineGear(BIG_TEETH, BIG_PITCH + ADD, BIG_PITCH - ADD, 20);
+const midGear = fineGear(MID_TEETH, MID_PITCH + ADD, MID_PITCH - ADD, 12, 4, 42, 7);
+
+// one tooth passes the mesh in this time on BOTH wheels ⇒ period ∝ teeth
+const TOOTH_TIME = 2.05;
+const gearPeriod = (teeth: number) => `${(teeth * TOOTH_TIME).toFixed(2)}s`;
+
+const clockAt = { x: 185, y: 135 }; // face radius ~87 including its rim stroke
+// Big wheel pushed clear of the dial: centres are ~276 apart against 87 + 152 of
+// radius (~37px clearance), so it no longer grazes the clock.
+const heroBig = { x: 440, y: 240, teeth: BIG_TEETH, pitch: BIG_PITCH };
+// Mid wheel seated down-left so its pitch circle is exactly tangent to the big
+// one — position derived from the centre distance, never eyeballed.
+const MESH_ANGLE = (140 * Math.PI) / 180;
+const CENTRES = BIG_PITCH + MID_PITCH;
+const heroMid = {
+  x: heroBig.x + CENTRES * Math.cos(MESH_ANGLE),
+  y: heroBig.y + CENTRES * Math.sin(MESH_ANGLE),
+  teeth: MID_TEETH,
+  pitch: MID_PITCH,
+};
+
+/** Phase angles (deg) that seat a tooth of `a` into the facing gap of `b`. */
+function meshPhases(a: typeof heroBig, b: typeof heroMid) {
+  const mod = (v: number, m: number) => ((v % m) + m) % m;
+  const line = (Math.atan2(b.y - a.y, b.x - a.x) * 180) / Math.PI; // a → b
+  const pa = 360 / a.teeth;
+  const pb = 360 / b.teeth;
+  return {
+    a: mod(line, pa), // a tooth of `a` points down the line of centres…
+    b: mod(line + 180 - pb / 2, pb), // …into a gap of `b` facing back
+  };
+}
+const heroPhase = meshPhases(heroBig, heroMid);
 
 // The projects rail: a full-height train of meshing wheels running down the
 // page margin — persistent in view for the whole section, out of the cards'
@@ -93,26 +140,36 @@ const ghostGearSmall = fineGear(30, 140, 127, 18);
 <div id="backdrop" class="pointer-events-none fixed inset-0 -z-10 hidden lg:block" aria-hidden="true">
   {/* ── intro: the clockwork + a few rising world lines ──────────────── */}
   <svg class="scene scene-intro right-0 top-6 h-[42rem] w-[42rem]" viewBox="0 0 660 660">
-    <g transform="translate(410 215)" style="color: var(--accent-bright)">
-      <g class="gear-spin">
+    <g transform={`translate(${heroBig.x} ${heroBig.y}) rotate(${heroPhase.a.toFixed(3)})`} style="color: var(--accent-bright)">
+      <g class="gear-spin" style={`--gear-period: ${gearPeriod(heroBig.teeth)}`}>
         <path d={bigGear} fill="currentColor" fill-rule="evenodd" opacity="0.12"></path>
         <circle r="102" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.2"></circle>
         <circle r="36" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.2"></circle>
       </g>
     </g>
-    <g transform="translate(235 362)" style="color: var(--accent-bright)">
-      <g class="gear-spin-reverse">
+    <g transform={`translate(${heroMid.x} ${heroMid.y}) rotate(${heroPhase.b.toFixed(3)})`} style="color: var(--accent-bright)">
+      <g class="gear-spin-reverse" style={`--gear-period: ${gearPeriod(heroMid.teeth)}`}>
         <path d={midGear} fill="currentColor" fill-rule="evenodd" opacity="0.16"></path>
         <circle r="52" fill="none" stroke="currentColor" stroke-width="1.2" opacity="0.22"></circle>
       </g>
     </g>
-    <g transform="translate(185 135)" opacity="0.2" style="color: var(--accent-bright)">
-      <circle r="86" fill="none" stroke="currentColor" stroke-width="2.5"></circle>
-      <path d={clockTicks(60, 78, 84)} stroke="currentColor" stroke-width="1" fill="none"></path>
-      <path d={clockTicks(12, 71, 84)} stroke="currentColor" stroke-width="2.5" fill="none"></path>
-      <path d={hand(44, 9)} fill="currentColor" transform="rotate(-55)"></path>
-      <path d={hand(64, 7)} fill="currentColor" transform="rotate(55)"></path>
-      <circle r="4" fill="currentColor"></circle>
+    {/* The clock runs. The hands must pivot on the dial centre, so each is its
+        own group rotating about (clockAt) in viewBox units — hence no ancestor
+        transform and transform-box:view-box in the CSS. Periods hold a true
+        12:1, so the face always reads as a real time. */}
+    <g opacity="0.2" style="color: var(--accent-bright)">
+      <g transform={`translate(${clockAt.x} ${clockAt.y})`}>
+        <circle r="86" fill="none" stroke="currentColor" stroke-width="2.5"></circle>
+        <path d={clockTicks(60, 78, 84)} stroke="currentColor" stroke-width="1" fill="none"></path>
+        <path d={clockTicks(12, 71, 84)} stroke="currentColor" stroke-width="2.5" fill="none"></path>
+        <circle r="4" fill="currentColor"></circle>
+      </g>
+      <g class="clock-hand" style={`transform-origin: ${clockAt.x}px ${clockAt.y}px; --clock-period: 1440s`}>
+        <path d={hand(44, 9)} fill="currentColor" transform={`translate(${clockAt.x} ${clockAt.y}) rotate(-55)`}></path>
+      </g>
+      <g class="clock-hand" style={`transform-origin: ${clockAt.x}px ${clockAt.y}px; --clock-period: 120s`}>
+        <path d={hand(64, 7)} fill="currentColor" transform={`translate(${clockAt.x} ${clockAt.y}) rotate(55)`}></path>
+      </g>
     </g>
   </svg>
   <svg class="scene scene-intro inset-0 h-full w-full" viewBox="0 0 1440 1000" preserveAspectRatio="xMidYMid slice">
