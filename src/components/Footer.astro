@@ -39,7 +39,7 @@ const alphaMeter = meter?.lightValue
               </a>
             ))
           }
-          <a class="link-mono" href={withBase(profile.resumeFile)}>Résumé ↗</a>
+          <a class="link-mono" href={withBase(profile.resumeFile)} target="_blank" rel="noopener">Résumé ↗</a>
         </div>
       </div>
 
@@ -77,7 +77,7 @@ const alphaMeter = meter?.lightValue
           id="dmail-send"
           href={`mailto:${profile.email}`}
           data-email={profile.email}
-          class="glow-text block border-t border-line px-4 py-3 text-center font-mono text-[0.8125rem] uppercase tracking-[0.22em] text-accent transition-colors hover:bg-wash"
+          class="glow-text flex min-h-[3rem] items-center justify-center border-t border-line px-4 py-3 text-center font-mono text-[0.8125rem] uppercase tracking-[0.22em] text-accent transition-colors hover:bg-wash"
         >
           <span data-dmail-label>Send D-Mail ↗</span>
         </a>

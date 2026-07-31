@@ -25,7 +25,7 @@
   --surface-inset: color-mix(in srgb, #ebebe8 55%, transparent);  /* figure wells / chips — translucent for the same reason */
   --ink: #191b1d;            /* neutral cool near-black */
   --ink-muted: #4d5257;
-  --ink-faint: #7e858b;
+  --ink-faint: #676d72;      /* AA-safe (>=4.5:1) on --surface for small labels */
   --line: #dddedb;
   --line-strong: #b6b9b4;
   --accent: #b8420c;         /* deep S;G orange — AA-safe for small text */
@@ -46,7 +46,7 @@
   --surface-inset: color-mix(in srgb, #0a0a0d 50%, transparent);
   --ink: #e9e9e7;
   --ink-muted: #a4a6a8;
-  --ink-faint: #6f7276;
+  --ink-faint: #84878c;      /* AA-safe (>=4.5:1) on --surface for small labels */
   --line: #26262c;
   --line-strong: #3f4048;
   --accent: #ff9d2e;
@@ -201,6 +201,11 @@ body {
 }
 
 .link-mono {
+  /* inline-flex + min-height keeps the tap target >= 44px (WCAG/HIG) without
+     changing where the text sits in its wrapping row */
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
   font-family: var(--font-mono);
   font-size: 0.8125rem;
   color: var(--accent);
