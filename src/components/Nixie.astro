@@ -2,18 +2,23 @@
 /**
  * A nixie-tube numeral display — the divergence meter. Built entirely from
  * CSS (no images): dark glass tubes, anode mesh, unlit cathode ghosts, and
- * glowing digits in the Nixie One face. With `scramble`, digits spin and
- * settle left-to-right the first time the meter scrolls into view (disabled
- * under prefers-reduced-motion).
+ * glowing digits in the Nixie One face. With `scramble`, the digits spin down
+ * and settle left-to-right the first time the meter scrolls into view, and
+ * again on every world-line shift (disabled under prefers-reduced-motion).
+ *
+ * `defer` hands the first roll to whoever owns the reveal (the hero times it
+ * against its entrance) instead of firing as soon as the tubes intersect —
+ * otherwise the meter would spin while it is still faded out.
  */
 interface Props {
   value: string; // digits and dots only, e.g. "1.048596"
   label?: string | undefined; // small caption under the tubes
   size?: string; // CSS font-size driving tube scale
   scramble?: boolean;
+  defer?: boolean;
 }
 
-const { value, label, size = '3rem', scramble = false } = Astro.props;
+const { value, label, size = '3rem', scramble = false, defer = false } = Astro.props;
 const chars = value.split('');
 ---
 
@@ -22,6 +27,7 @@ const chars = value.split('');
     class="nixie"
     data-value={value}
     data-scramble={scramble ? 'true' : undefined}
+    data-defer={defer ? 'true' : undefined}
     style={`font-size: ${size}`}
     aria-hidden="true"
   >
@@ -34,9 +40,10 @@ const chars = value.split('');
         ) : (
           <span class="nixie-tube">
             <span class="nixie-ghost">8</span>
-            <span class="nixie-digit" data-final={ch}>
-              {ch}
-            </span>
+            {/* prettier-ignore — kept on one line so the glyph carries no
+                surrounding whitespace; the roll rewrites textContent and any
+                padding would change the tube's width on first animation */}
+            <span class="nixie-digit" data-final={ch}>{ch}</span>
           </span>
         )
       )
@@ -46,43 +53,32 @@ const chars = value.split('');
 </div>
 
 <script>
-  // Digits spin and settle left-to-right: once when a meter first scrolls
-  // into view, and again on every world-line shift (theme toggle).
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Digits spin down and settle left-to-right: once when a meter first
+  // appears, and again on every world-line shift (theme toggle).
+  import { motionOK, rollDigits, whenVisible } from '../lib/motion';
 
-  function scramble(meter: HTMLElement) {
-    if (meter.dataset.running === 'true') return;
+  const ROLL_MS = 950;
+
+  function roll(meter: HTMLElement) {
     const digits = [...meter.querySelectorAll<HTMLElement>('.nixie-digit')];
-    if (digits.length === 0) return;
+    if (digits.length === 0 || meter.dataset.running === 'true') return;
     meter.dataset.running = 'true';
-    const start = performance.now();
-    const DURATION = 1400;
-    const tick = () => {
-      const p = (performance.now() - start) / DURATION;
-      for (let i = 0; i < digits.length; i++) {
-        const el = digits[i]!;
-        el.textContent =
-          p >= 1 || i / digits.length < p ? (el.dataset.final ?? '') : String(Math.floor(Math.random() * 10));
-      }
-      if (p < 1) requestAnimationFrame(tick);
-      else meter.dataset.running = 'false';
-    };
-    tick();
+    rollDigits(digits, { duration: ROLL_MS, step: 55 });
+    window.setTimeout(() => (meter.dataset.running = 'false'), ROLL_MS + digits.length * 55 + 60);
   }
 
-  // `?static=1` (no .js class) disables scripted animation too — meters
-  // render settled, matching the no-JS experience.
-  if (!reduced && document.documentElement.classList.contains('js')) {
-    for (const meter of document.querySelectorAll<HTMLElement>('.nixie[data-scramble]')) {
-      const io = new IntersectionObserver((entries) => {
-        if (!entries.some((e) => e.isIntersecting)) return;
-        io.disconnect();
-        scramble(meter);
-      });
-      io.observe(meter);
+  // `?static=1` (no .js class) and reduced motion both leave the tubes on
+  // their server-rendered values, matching the no-JS experience.
+  if (motionOK()) {
+    const meters = [...document.querySelectorAll<HTMLElement>('.nixie[data-scramble]')];
+
+    for (const meter of meters) {
+      // deferred meters wait for their owner to call the roll (see Hero)
+      if (meter.dataset.defer !== 'true') whenVisible(meter, () => roll(meter), '0px');
     }
-    window.addEventListener('wl-shift', () => {
-      document.querySelectorAll<HTMLElement>('.nixie[data-scramble]').forEach(scramble);
+    window.addEventListener('nixie-roll', () => {
+      meters.filter((m) => m.dataset.defer === 'true').forEach(roll);
     });
+    window.addEventListener('wl-shift', () => meters.forEach(roll));
   }
 </script>

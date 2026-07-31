@@ -22,12 +22,19 @@ const linkLabels = { repo: 'Repo', demo: 'Live demo', devpost: 'Devpost', writeu
           string,
         ][];
         return (
-          <article class="flex flex-col border border-line bg-raised backdrop-blur-[5px]" data-reveal style={`--reveal-delay: ${(i % 2) * 90}ms`}>
+          <article
+            class="flex flex-col border border-line bg-raised backdrop-blur-[5px]"
+            data-reveal
+            data-card
+            style={`--reveal-delay: ${(i % 2) * 90}ms`}
+          >
             <Figure visuals={project.visuals} figNumber={figNumber} title={project.title} />
             <div class="flex grow flex-col p-6 md:p-7">
               <div class="flex items-baseline justify-between gap-4">
                 <span class="font-mono text-[0.6875rem] uppercase tracking-[0.12em] text-faint">
-                  FG-<span class="text-accent">{figNumber}</span>
+                  {/* prettier-ignore — one line so the digits carry no stray
+                      whitespace; the hover roll rewrites textContent */}
+                  FG-<span class="text-accent">{figNumber.split('').map((d) => (<span class="fg-digit" data-final={d}>{d}</span>))}</span>
                   {project.timeframe && <span class="ml-2 tracking-[0.06em]">· {project.timeframe}</span>}
                 </span>
                 <span class="bg-wash px-2.5 py-1 font-mono text-[0.6875rem] uppercase tracking-[0.14em] text-accent-deep">
@@ -63,3 +70,42 @@ const linkLabels = { repo: 'Repo', demo: 'Live demo', devpost: 'Devpost', writeu
     }
   </div>
 </Section>
+
+<script>
+  // Cards lift on a spring and re-roll their FG code, so picking one over
+  // feels like selecting an instrument channel. Hover is mirrored on keyboard
+  // focus so it is not a pointer-only affordance.
+  //
+  // The entrance reveal animates the `translate` property and this animates
+  // `transform` — separate CSS properties, so the two never fight.
+  import { animate, createSpring, motionOK, rollDigits } from '../lib/motion';
+
+  if (motionOK()) {
+    const canHover = window.matchMedia('(hover: hover)').matches;
+    const lift = createSpring({ stiffness: 190, damping: 15 });
+    const drop = createSpring({ stiffness: 200, damping: 20 });
+
+    for (const card of document.querySelectorAll<HTMLElement>('[data-card]')) {
+      const digits = [...card.querySelectorAll<HTMLElement>('.fg-digit')];
+      let rolling = false;
+
+      const enter = () => {
+        animate(card, { y: -4, ease: lift });
+        if (rolling || digits.length === 0) return;
+        rolling = true;
+        rollDigits(digits, { duration: 460, step: 45, spins: 1 });
+        window.setTimeout(() => (rolling = false), 620);
+      };
+      const leave = () => animate(card, { y: 0, ease: drop });
+
+      if (canHover) {
+        card.addEventListener('mouseenter', enter);
+        card.addEventListener('mouseleave', leave);
+      }
+      card.addEventListener('focusin', enter);
+      card.addEventListener('focusout', (event) => {
+        if (!card.contains(event.relatedTarget as Node | null)) leave();
+      });
+    }
+  }
+</script>

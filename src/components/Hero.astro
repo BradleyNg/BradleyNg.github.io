@@ -20,7 +20,7 @@ const meterSize = 'clamp(2.3rem,6vw,3.5rem)';
 {/* Decorative art lives in the fixed Backdrop layer (scene: intro). */}
 <section id="top" aria-label="Introduction">
   <div class="mx-auto max-w-6xl px-5 pb-16 pt-14 md:px-8 md:pb-20 md:pt-24">
-    <div class="flex flex-wrap items-center gap-x-4 gap-y-3" data-reveal>
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-3" data-boot="kicker">
       {
         profile.badge && (
           <span class="device border border-line-strong bg-surface px-2.5 py-1.5 font-mono text-[0.6875rem] uppercase tracking-[0.18em] text-accent">
@@ -33,14 +33,13 @@ const meterSize = 'clamp(2.3rem,6vw,3.5rem)';
 
     <h1
       class="font-display mt-6 text-[clamp(2.5rem,8.2vw,5.5rem)] font-bold uppercase leading-[0.98] tracking-tight"
-      data-reveal
-      style="--reveal-delay: 60ms"
+      data-boot="name"
     >
       {/* prettier-ignore — single line so no whitespace renders around the semicolon */}
-      {nameParts.map((part, i) => (<>{i > 0 && <span class="sr-only"> </span>}{i > 0 && <span class="glow-text text-accent-bright" aria-hidden="true">;</span>}<span>{part}</span></>))}
+      {nameParts.map((part, i) => (<>{i > 0 && <span class="sr-only"> </span>}{i > 0 && <span class="glow-text hero-semi text-accent-bright" aria-hidden="true">;</span>}<span>{part}</span></>))}
     </h1>
 
-    <p class="mt-7 max-w-[44rem] text-lg leading-relaxed text-muted md:text-[1.1875rem]" data-reveal style="--reveal-delay: 120ms">
+    <p class="mt-7 max-w-[44rem] text-lg leading-relaxed text-muted md:text-[1.1875rem]" data-boot="lede">
       {profile.positioning}
     </p>
 
@@ -48,13 +47,13 @@ const meterSize = 'clamp(2.3rem,6vw,3.5rem)';
 
     {
       meter && (
-        <div class="mt-12" data-reveal style="--reveal-delay: 240ms">
+        <div class="mt-12" data-boot="meter">
           <div class:list={[alphaMeter && 'only-beta']}>
-            <Nixie value={meter.value} label={meter.label} size={meterSize} scramble />
+            <Nixie value={meter.value} label={meter.label} size={meterSize} scramble defer />
           </div>
           {alphaMeter && (
             <div class="only-alpha">
-              <Nixie value={alphaMeter.value} label={alphaMeter.label} size={meterSize} scramble />
+              <Nixie value={alphaMeter.value} label={alphaMeter.label} size={meterSize} scramble defer />
             </div>
           )}
         </div>
@@ -63,7 +62,7 @@ const meterSize = 'clamp(2.3rem,6vw,3.5rem)';
 
     {
       profile.metrics.length > 0 && (
-        <ul class="mt-12 grid border-y border-line sm:grid-cols-2 lg:grid-cols-4" data-reveal style="--reveal-delay: 300ms">
+        <ul class="mt-12 grid border-y border-line sm:grid-cols-2 lg:grid-cols-4" data-boot="metrics">
           {profile.metrics.map((metric, i) => (
             <li
               class:list={[
@@ -73,8 +72,11 @@ const meterSize = 'clamp(2.3rem,6vw,3.5rem)';
                 i > 1 && 'sm:border-t sm:border-line lg:border-t-0',
                 i > 0 && 'lg:border-l lg:border-line',
               ]}
+              data-boot-metric
             >
-              <p class="font-mono text-xl font-medium tabular-nums text-accent md:text-[1.375rem]">{metric.value}</p>
+              <p class="font-mono text-xl font-medium tabular-nums text-accent md:text-[1.375rem]" data-metric data-value={metric.value}>
+                {metric.value}
+              </p>
               <p class="mt-1.5 text-xs leading-snug text-faint">{metric.label}</p>
             </li>
           ))}
@@ -83,3 +85,57 @@ const meterSize = 'clamp(2.3rem,6vw,3.5rem)';
     }
   </div>
 </section>
+
+<script>
+  // The hero boots like an instrument coming online: label, name, positioning,
+  // then the meter spins up and the readout panel populates. One orchestrated
+  // sequence rather than five independent reveals, so the eye is led down the
+  // page in the order the content should be read.
+  import { createSpring, createTimeline, countMetric, motionOK, stagger, utils, DUR, EASE } from '../lib/motion';
+
+  const hero = document.querySelector<HTMLElement>('#top');
+
+  if (hero) {
+    const boot = (name: string) => hero.querySelector<HTMLElement>(`[data-boot="${name}"]`);
+    const items = [...hero.querySelectorAll<HTMLElement>('[data-boot-metric]')];
+    const metrics = [...hero.querySelectorAll<HTMLElement>('[data-metric]')];
+    const semi = hero.querySelector<HTMLElement>('.hero-semi');
+    const staged = [...hero.querySelectorAll<HTMLElement>('[data-boot]')];
+
+    if (!motionOK()) {
+      // reduced motion / ?static=1: show the settled state, no movement
+      utils.set([...staged, ...items], { opacity: 1, y: 0 });
+    } else {
+      const rise = (y: number) => ({ opacity: [0, 1] as [number, number], y: [y, 0] as [number, number] });
+      const tl = createTimeline({ defaults: { duration: DUR.enter, ease: EASE.enter } });
+
+      tl.add(boot('kicker')!, rise(12), 0)
+        .add(boot('name')!, rise(18), 90)
+        .add(boot('lede')!, rise(14), 240)
+        .add(
+          boot('meter')!,
+          {
+            ...rise(14),
+            // the tubes spin up as they fade in, not before
+            onBegin: () => window.dispatchEvent(new CustomEvent('nixie-roll')),
+          },
+          380
+        )
+        .add(boot('metrics')!, { opacity: [0, 1] }, 520)
+        .add(
+          items,
+          {
+            ...rise(10),
+            duration: 420,
+            delay: stagger(55),
+            // the figures count as the panel lands
+            onBegin: () => metrics.forEach(countMetric),
+          },
+          560
+        );
+
+      // the signature semicolon lands with a little spring, after the name
+      if (semi) tl.add(semi, { scale: [0.55, 1], ease: createSpring({ stiffness: 240, damping: 11 }) }, 430);
+    }
+  }
+</script>

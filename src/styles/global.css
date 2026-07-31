@@ -852,6 +852,39 @@ html:not(.js) .wl-orb {
   translate: 0 0;
 }
 
+/* ── Scripted motion (anime.js) ──────────────────────────────────────────────
+   Only the STARTING states live here, and only under `.js` — the settled state
+   is each element's plain CSS, so no-JS, `?static=1`, crawlers and reduced
+   motion all get the finished layout. See src/lib/motion.ts. */
+
+/* hero boot sequence */
+.js [data-boot],
+.js [data-boot-metric] {
+  opacity: 0;
+}
+/* the logotype semicolon springs in, so it needs a transformable box */
+.hero-semi {
+  display: inline-block;
+}
+/* section accent rules draw left-to-right */
+.js [data-rule] {
+  transform: scaleX(0);
+  transform-origin: left center;
+}
+
+/* Project cards: the spring lift is scripted (transform); the surface cues
+   stay in CSS so they also work for touch/keyboard without a pointer. */
+.js [data-card] {
+  transition:
+    border-color 0.2s ease-out,
+    box-shadow 0.2s ease-out;
+}
+.js [data-card]:hover,
+.js [data-card]:focus-within {
+  border-color: var(--line-strong);
+  box-shadow: 0 10px 30px -14px var(--glow);
+}
+
 /* ── Reduced motion: everything static, nothing lost ─────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
@@ -861,6 +894,18 @@ html:not(.js) .wl-orb {
   .js [data-reveal] {
     opacity: 1;
     translate: none;
+    transition: none;
+  }
+  /* scripted motion is skipped entirely (motionOK() is false), so its start
+     states must resolve to the settled ones or content would stay hidden */
+  .js [data-boot],
+  .js [data-boot-metric] {
+    opacity: 1;
+  }
+  .js [data-rule] {
+    transform: none;
+  }
+  .js [data-card] {
     transition: none;
   }
   .wl-card,
