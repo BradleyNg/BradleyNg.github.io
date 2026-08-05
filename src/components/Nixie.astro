@@ -59,12 +59,15 @@ const chars = value.split('');
 
   const ROLL_MS = 950;
 
+  // The two hero meters (α and S;G) both exist; CSS shows only the one matching
+  // the current theme. A meter that is not rendered must never roll — its
+  // animation would run down while hidden, so revealing it later would show
+  // digits that had already settled.
+  const isShown = (el: HTMLElement) => el.getClientRects().length > 0;
+
   function roll(meter: HTMLElement) {
     const digits = [...meter.querySelectorAll<HTMLElement>('.nixie-digit')];
-    if (digits.length === 0 || meter.dataset.running === 'true') return;
-    meter.dataset.running = 'true';
-    rollDigits(digits, { duration: ROLL_MS, step: 55 });
-    window.setTimeout(() => (meter.dataset.running = 'false'), ROLL_MS + digits.length * 55 + 60);
+    if (digits.length > 0) rollDigits(digits, { duration: ROLL_MS, step: 55 });
   }
 
   // `?static=1` (no .js class) and reduced motion both leave the tubes on
@@ -77,8 +80,12 @@ const chars = value.split('');
       if (meter.dataset.defer !== 'true') whenVisible(meter, () => roll(meter), '0px');
     }
     window.addEventListener('nixie-roll', () => {
-      meters.filter((m) => m.dataset.defer === 'true').forEach(roll);
+      meters.filter((m) => m.dataset.defer === 'true' && isShown(m)).forEach(roll);
     });
-    window.addEventListener('wl-shift', () => meters.forEach(roll));
+    // Every shift restarts the roll on whichever meter the new theme reveals.
+    // There is deliberately no re-entrancy guard: pressing again mid-roll should
+    // keep the digits flipping and settle them on the new reading, not snap
+    // them to it.
+    window.addEventListener('wl-shift', () => meters.filter(isShown).forEach(roll));
   }
 </script>

@@ -38,6 +38,9 @@ export function motionOK(): boolean {
   );
 }
 
+/** The roll currently animating a given digit, so it can be cancelled. */
+const inFlight = new WeakMap<HTMLElement, object>();
+
 /** Runs `cb` once, the first time `el` scrolls into view. */
 export function whenVisible(el: Element, cb: () => void, rootMargin = '0px 0px -10% 0px'): void {
   const io = new IntersectionObserver(
@@ -55,6 +58,10 @@ export function whenVisible(el: Element, cb: () => void, rootMargin = '0px 0px -
  * Spins numerals down to rest, like a mechanical counter settling: the value
  * decelerates through whole digits, so the glyph changes fast at first and
  * slower as it lands. Each element carries its target in `data-final`.
+ *
+ * Re-entrant by design: calling this again on digits that are still rolling
+ * cancels the old pass and starts a fresh one, so a repeated trigger keeps the
+ * glyphs flipping rather than snapping them to their final values.
  */
 export function rollDigits(
   digits: HTMLElement[],
@@ -64,8 +71,16 @@ export function rollDigits(
     const finalChar = el.dataset.final ?? el.textContent ?? '';
     const target = Number.parseInt(finalChar, 10);
     if (Number.isNaN(target)) return;
+
+    // Stop any roll still in flight on this digit so a re-trigger restarts
+    // cleanly. Without this both animations would write the same glyph every
+    // frame and the older one's completion would freeze it early.
+    const prev = inFlight.get(el);
+    if (prev) utils.remove(prev);
+
     // uneven spin counts keep the row from settling in lockstep
     const state = { v: target + 10 * (spins + (i % 2)) };
+    inFlight.set(el, state);
     animate(state, {
       v: target,
       duration,
